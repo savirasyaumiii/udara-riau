@@ -351,6 +351,81 @@ function berasap(x) {
   return !!x && ([5, 10, 45].includes(+x.kode) || /kabur|asap|kabut/i.test(x.cuaca));
 }
 
+/* ---------- cuaca harian dan iklim (halaman Cuaca) ---------- */
+
+/* Satu lokasi dari Open-Meteo Forecast API dengan daily=temperature_2m_max,temperature_2m_min,
+   precipitation_sum,precipitation_probability_max (ditambah past_days dan forecast_days).
+   Hasil: [{t:'YYYY-MM-DD', tx, tn, ch, pp}] (suhu dan hujan satu desimal; nilai kosong = null)
+   atau null. */
+function parseHarian(j) {
+  const d = j && j.daily;
+  if (!d || !Array.isArray(d.time) || !d.time.length) return null;
+  const v = (k, i, n) => Array.isArray(d[k]) && d[k][i] != null && isFinite(+d[k][i]) ? Math.round(+d[k][i] * n) / n : null;
+  return d.time.map((t, i) => ({ t: String(t).slice(0, 10), tx: v('temperature_2m_max', i, 10), tn: v('temperature_2m_min', i, 10),
+    ch: v('precipitation_sum', i, 10), pp: v('precipitation_probability_max', i, 1) }));
+}
+
+/* Hari tanpa hujan (HTH) berturut-turut sampai kemarin (hari sebelum hariIni, 'YYYY-MM-DD').
+   Hari dengan curah hujan >= AMBANG_HUJAN menghentikan hitungan; data kosong juga.
+   Hasil: {n, akhir: {t, ch} (hari hujan terakhir) atau null, lengkap}. lengkap = false bila
+   hitungan berhenti karena data habis atau kosong, jadi HTH sebenarnya bisa lebih panjang. */
+function hariTanpaHujan(D, hariIni) {
+  const lalu = (D || []).filter(x => x.t < hariIni);
+  let n = 0;
+  for (let i = lalu.length - 1; i >= 0; i--) {
+    const x = lalu[i];
+    if (x.ch == null) return { n, akhir: null, lengkap: false };
+    if (x.ch >= AMBANG_HUJAN) return { n, akhir: { t: x.t, ch: x.ch }, lengkap: true };
+    n++;
+  }
+  return { n, akhir: null, lengkap: false };
+}
+
+/* Indeks kategori HTH_KAT untuk n hari tanpa hujan */
+function kategoriHTH(n) { return HTH_KAT.findIndex(k => n <= k[0]); }
+
+/* Curah hujan harian dari NASA POWER daily API:
+   {properties:{parameter:{PRECTOTCORR:{'YYYYMMDD': mm}}}}. Nilai -999 (belum tersedia) dibuang.
+   Hasil: [{t:'YYYY-MM-DD', ch}] terurut, atau null. */
+function parsePOWER(j) {
+  const p = j && j.properties && j.properties.parameter && j.properties.parameter.PRECTOTCORR;
+  if (!p || typeof p !== 'object') return null;
+  const D = Object.keys(p).filter(k => /^\d{8}$/.test(k) && p[k] != null && isFinite(+p[k]) && +p[k] > -999).sort()
+    .map(k => ({ t: k.slice(0, 4) + '-' + k.slice(4, 6) + '-' + k.slice(6), ch: Math.round(+p[k] * 10) / 10 }));
+  return D.length ? D : null;
+}
+
+/* Curah hujan n hari terakhir yang datanya ada, dibanding normalnya. hh = normal mm/hari
+   per bulan (IKLIM). Sifat hujan memakai batas BMKG (SIFAT_HUJAN); BMKG memakainya untuk
+   jumlah bulanan, di sini diterapkan pada n hari.
+   Hasil: {dari, sampai, total, normal, persen, sifat (indeks SIFAT_HUJAN),
+   R: [{t, ch, kum, kumN}] (jumlah berjalan per hari, untuk grafik)}, atau null bila data < n hari. */
+function hujanVsNormal(D, hh, n) {
+  if (!D || D.length < n || !hh) return null;
+  const A = D.slice(-n), R = [];
+  let kum = 0, kumN = 0;
+  A.forEach(x => {
+    kum += x.ch; kumN += hh[+x.t.slice(5, 7) - 1];
+    R.push({ t: x.t, ch: x.ch, kum: Math.round(kum), kumN: Math.round(kumN) });
+  });
+  const persen = Math.round(kum / kumN * 100);
+  return { dari: A[0].t, sampai: A[A.length - 1].t, total: Math.round(kum), normal: Math.round(kumN), persen,
+    sifat: SIFAT_HUJAN.findIndex(s => persen <= s[0]), R };
+}
+
+/* Curah hujan normal bulanan (mm/bulan, bulat) dari hh (mm/hari) */
+function normalBulanan(hh) { return hh.map((v, m) => Math.round(v * HARI_BULAN[m])); }
+
+/* Bulan relatif kering: normal di bawah AMBANG_KERING x rata-rata bulanan wilayah itu.
+   Hasil: [benar/salah] untuk Januari..Desember. */
+function bulanKering(hh) {
+  const r = hh.reduce((s, v) => s + v, 0) / hh.length;
+  return hh.map(v => v < AMBANG_KERING * r);
+}
+
+/* Nama hari singkat ('Sen') dari tanggal 'YYYY-MM-DD' */
+function namaHari(t) { return HARI_PENDEK[new Date(t.slice(0, 10) + 'T00:00:00Z').getUTCDay()]; }
+
 /* ---------- geografi dan asap kiriman (bagan alir: Indikasi Asap Kiriman) ---------- */
 
 const RAD = Math.PI / 180;

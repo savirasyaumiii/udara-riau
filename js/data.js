@@ -116,9 +116,10 @@ const KESIAPAN = [
   { kode: 'air',     teks: 'Air minum dan stok makanan untuk beberapa hari tersedia' }
 ];
 
-/* Empat halaman (tab) */
+/* Lima halaman (tab) */
 const TAB = [
   { kode: 'hari',    label: 'Hari ini', ikon: 'sun' },
+  { kode: 'cuaca',   label: 'Cuaca',    ikon: 'cloud' },
   { kode: 'riau',    label: 'Se-Riau',  ikon: 'map' },
   { kode: 'rencana', label: 'Rencana',  ikon: 'calendar' },
   { kode: 'catatan', label: 'Catatan',  ikon: 'book' }
@@ -139,8 +140,36 @@ const API = {
   cuaca: 'https://api.open-meteo.com/v1/forecast',
   bmkg: 'https://api.bmkg.go.id/publik/prakiraan-cuaca',
   waqi: 'https://api.waqi.info',
-  gibs: 'https://gibs.earthdata.nasa.gov'
+  gibs: 'https://gibs.earthdata.nasa.gov',
+  power: 'https://power.larc.nasa.gov/api/temporal/daily/point'
 };
+
+/* ---------- cuaca dan iklim (halaman Cuaca) ----------
+   Hari hujan = curah hujan harian minimal 1 mm (batas yang dipakai BMKG). */
+const AMBANG_HUJAN = 1;
+
+/* Kategori hari tanpa hujan (HTH) berturut-turut menurut BMKG: [batas atas hari, nama].
+   0 = masih ada hujan kemarin. */
+const HTH_KAT = [
+  [0, 'Masih ada hujan'], [5, 'Sangat pendek'], [10, 'Pendek'], [20, 'Menengah'],
+  [30, 'Panjang'], [60, 'Sangat panjang'], [Infinity, 'Ekstrem panjang']
+];
+
+/* Sifat hujan menurut BMKG: perbandingan curah hujan terhadap normalnya (persen).
+   Bawah normal < 85 %, normal 85–115 %, atas normal > 115 %.
+   [batas atas persen (bilangan bulat, persen dibulatkan), nama] */
+const SIFAT_HUJAN = [[84, 'Bawah normal'], [115, 'Normal'], [Infinity, 'Atas normal']];
+
+/* Bulan disebut relatif kering bila curah hujan normalnya di bawah 85 % rata-rata bulanan
+   wilayah itu. Riau berpola hujan dua puncak (ekuatorial) sehingga banyak wilayah tidak
+   punya musim kemarau tegas; bulan relatif kering biasanya bertepatan dengan periode rawan
+   kebakaran hutan dan lahan. Ini patokan rancangan, bukan penetapan musim oleh BMKG. */
+const AMBANG_KERING = 0.85;
+
+/* Jumlah hari tiap bulan untuk normal iklim (Februari rata-rata 28,25 hari) */
+const HARI_BULAN = [31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+const NAMA_BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const HARI_PENDEK = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
 /* Stasiun ukur PM2.5 BMKG di Pekanbaru (alat BAM), diteruskan jaringan WAQI dengan
    nomor stasiun 8288. Halaman resmi BMKG dipakai sebagai tautan rujukan. */

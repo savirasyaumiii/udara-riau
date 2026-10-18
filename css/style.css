@@ -17,6 +17,7 @@
   --ok: #1B7F47; --focus: #0B5BD3;
   --okbg: #DDF1E5; --okfg: #0F5A31; --wtbg: #FFF1C9; --wtfg: #6B4F00; --nobg: #FBE0E0; --nofg: #9B1F1F;
   --acc: #0B6E8A; --acc-ink: #FFFFFF; --accs: #E0F0F5; --warm: #E8743B; --smoke: #B07A4A; --api: #D4400F;
+  --hujan: #2A78D6; --suhu: #EB6834;   /* warna data grafik Cuaca (lolos pemeriksa palet: buta warna, kontras 3:1) */
   --sh: 0 1px 2px rgba(19, 35, 46, .06), 0 12px 32px -16px rgba(19, 35, 46, .24);
   --cat: #5E7180;
   --disp: 'Bricolage Grotesque', 'Atkinson Hyperlegible', system-ui, sans-serif;
@@ -28,6 +29,7 @@
     --ok: #4CC37F; --focus: #8DB4FF;
     --okbg: #123524; --okfg: #7FE0B8; --wtbg: #3A2E0A; --wtfg: #F2D27A; --nobg: #3E1717; --nofg: #FF9C9C;
     --acc: #5CC6E0; --acc-ink: #06222B; --accs: #123440; --warm: #F29A62; --smoke: #D3A274; --api: #FF7442;
+  --hujan: #3987E5; --suhu: #D95926;
     --sh: 0 1px 2px rgba(0, 0, 0, .4), 0 14px 34px -16px rgba(0, 0, 0, .7);
     color-scheme: dark;
   }
@@ -37,6 +39,7 @@
   --ok: #4CC37F; --focus: #8DB4FF;
   --okbg: #123524; --okfg: #7FE0B8; --wtbg: #3A2E0A; --wtfg: #F2D27A; --nobg: #3E1717; --nofg: #FF9C9C;
   --acc: #5CC6E0; --acc-ink: #06222B; --accs: #123440; --warm: #F29A62; --smoke: #D3A274; --api: #FF7442;
+  --hujan: #3987E5; --suhu: #D95926;
   --sh: 0 1px 2px rgba(0, 0, 0, .4), 0 14px 34px -16px rgba(0, 0, 0, .7);
   color-scheme: dark;
 }
@@ -104,7 +107,7 @@ a { color: inherit; }
    Sengaja tidak memakai bilah tetap di bawah karena peramban dalam aplikasi (WhatsApp, Instagram)
    dan bilah alat peramban ponsel dapat menutupinya. Pada layar pendek (ponsel landscape)
    menu ikut menggulir agar isi tidak kehabisan ruang. */
-.tabs { position: sticky; top: 0; z-index: 20; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
+.tabs { position: sticky; top: 0; z-index: 20; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px;
   margin: 0 calc(-1 * var(--gr)) 14px calc(-1 * var(--gl)); padding: 8px var(--gr) 8px var(--gl); background: var(--bg); }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .tabs { background: color-mix(in srgb, var(--bg) 78%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); }
@@ -378,6 +381,28 @@ a { color: inherit; }
 .lg.key i.kap { width: 12px; height: 11px; border-radius: 0; background: var(--api); clip-path: polygon(50% 0, 100% 100%, 0 100%); box-shadow: none; }
 .lg.key i.kst { width: 9px; height: 9px; border-radius: 1px; background: var(--ink); box-shadow: none; }
 
+/* halaman Cuaca: tanda tipis, garis bantu tipis tanpa putus, warna data --hujan dan --suhu */
+.gb { stroke: var(--ln); stroke-width: 1; }
+.bh { fill: var(--hujan); }
+.bs { fill: var(--suhu); }
+.ls, .lh, .lnorm { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.ls { stroke: var(--suhu); stroke-width: 2; }
+.lh { stroke: var(--hujan); stroke-width: 2; }
+.lnorm { stroke: var(--mute); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.ds, .dh { stroke: var(--sf); stroke-width: 2; }
+.ds { fill: var(--suhu); }
+.dh { fill: var(--hujan); }
+.pa { fill: var(--mute); }
+.wk { fill: var(--smoke); opacity: .14; }
+:root[data-theme="dark"] .wk { opacity: .1; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .wk { opacity: .1; } }
+.card h3.sub { font-size: 1rem; margin: 18px 0 4px; }
+.lg.key i.kl { width: 18px; height: 0; border-radius: 0; box-shadow: none; border-top: 2px solid var(--hujan); }
+.lg.key i.kl.kn { border-top: 2px dashed var(--mute); }
+.lg.key i.kbh { background: var(--hujan); box-shadow: none; }
+.lg.key i.kwk { background: var(--smoke); opacity: .35; box-shadow: none; }
+.lg.key i.kbi { width: 8px; height: 8px; border-radius: 50%; background: var(--ink); box-shadow: none; }
+
 /* ---------- 14. layar lebar ---------- */
 @media (min-width: 860px) {
   .wrap { padding-block: 16px 56px; }
@@ -405,7 +430,8 @@ a { color: inherit; }
   .set > h2, .set > .src, .set > #lg { grid-column: 1 / -1; }
   .set > .srow:nth-of-type(1) { grid-column: 1; grid-row: 2; border-top: 0; }
   .set > .srow:nth-of-type(2) { grid-column: 1; grid-row: 3; }
-  .set > .srow.col { grid-column: 2; grid-row: 2 / span 2; border-top: 0; }
+  .set > .srow.col { grid-column: 2; grid-row: 2 / span 3; border-top: 0; }
+  .set > .srow.auto { grid-column: 1; grid-row: 4; border-top: 1px solid var(--ln); }
 }
 
 /* ---------- 15. gerak (dimatikan bila perangkat meminta gerakan dikurangi) ---------- */

@@ -2,11 +2,12 @@
 
 Panduan harian kualitas udara dan kabut asap untuk 12 kabupaten/kota di Provinsi Riau. Web statis (HTML, CSS, JavaScript tanpa kerangka kerja, tanpa server, tanpa basis data) yang dibuat sebagai proyek Kerja Praktik Teknik Informatika UIR dengan pendekatan *Design Thinking*. Judul proyek: *Perancangan Pengalaman Pengguna Web Panduan Kualitas Udara dan Kabut Asap 12 Kabupaten/Kota di Provinsi Riau untuk Mendukung Aktivitas Kerja Pegawai dengan Metode Design Thinking (Studi Kasus: Pegawai Kantor Cabang Bank di Pekanbaru)*. Aspek studi kasus pegawai ada pada kelompok pengguna **Pegawai kantor** dan kegiatan **Berangkat atau pulang kerja** serta **Kunjungan nasabah atau kerja di luar kantor** pada halaman Rencana.
 
-Empat halaman:
+Lima halaman:
 
 | Halaman | Isi |
 |---|---|
 | **Hari ini** | Kalimat keputusan, angka US AQI dan skala kategori, cuaca BMKG saat ini, ringkasan angka (PM2.5 jam ini, tertinggi/terendah 24 jam, tren), hasil ukur stasiun dengan perkiraan ISPU (bila token WAQI diisi), prakiraan cuaca BMKG per 3 jam dengan peringatan udara kabur/berasap, grafik 48 jam, saran per kelompok pengguna |
+| **Cuaca** | Grafik cuaca 3 hari BMKG (suhu, hujan, arah angin), prakiraan 14 hari (suhu dan peluang hujan), hari tanpa hujan dan hujan 90 hari dibanding normal (sifat hujan BMKG), iklim bulanan 1991–2020 dengan bulan relatif kering |
 | **Se-Riau** | Peta dan peringkat 12 kabupaten/kota (dengan cuaca BMKG tiap wilayah, titik panas satelit, dan stasiun ukur), indikasi asap kiriman, titik panas di arah datangnya angin |
 | **Rencana** | Jam aman 48 jam untuk delapan kegiatan (termasuk dua kegiatan kerja), garis waktu, jam terbaik, saran alternatif |
 | **Catatan** | Catatan gejala pribadi, pola gejala terhadap AQI, daftar kesiapan (tersimpan hanya di peramban) |
@@ -20,18 +21,22 @@ udara-riau/
 ├── img/pratinjau.jpg   gambar pratinjau tautan saat dibagikan (1200 x 630)
 ├── js/
 │   ├── kunci.js        token layanan data (token WAQI, diisi pemilik web; boleh kosong)
-│   ├── data.js         data referensi: wilayah, kategori AQI dan ISPU, saran, kegiatan, alamat API, patokan titik panas
-│   ├── logic.js        fungsi murni: kategori, saran, tren, jam aman, asap kiriman, pola gejala, ISPU, pembaca WAQI dan petak satelit
-│   ├── api.js          permintaan ke Open-Meteo (cache 15 menit, cadangan maks. 3 jam), BMKG (cache 1 jam, cadangan maks. 12 jam),
-│   │                   WAQI (cache 15 menit, cadangan maks. 3 jam), dan NASA GIBS (cache 1 jam, cadangan maks. 6 jam)
-│   ├── svg.js          ikon, langit, grafik, garis waktu, peta, kompas (semuanya SVG)
-│   └── app.js          keadaan aplikasi, tampilan empat halaman, interaksi
+│   ├── data.js         data referensi: wilayah, kategori AQI dan ISPU, saran, kegiatan, alamat API, patokan titik panas,
+│   │                   kategori hari tanpa hujan dan sifat hujan BMKG
+│   ├── iklim.js        normal iklim bulanan 1991–2020 tiap wilayah (dibuat oleh tools/buat-iklim.js)
+│   ├── logic.js        fungsi murni: kategori, saran, tren, jam aman, asap kiriman, pola gejala, ISPU, pembaca WAQI dan petak
+│   │                   satelit, hari tanpa hujan, hujan dibanding normal, bulan relatif kering
+│   ├── api.js          permintaan ke Open-Meteo (cache 15 menit, cadangan maks. 3 jam; harian 3 jam), BMKG (cache 1 jam,
+│   │                   cadangan maks. 12 jam), WAQI (15 menit), NASA GIBS (1 jam), dan NASA POWER (12 jam)
+│   ├── svg.js          ikon, langit, grafik, garis waktu, peta, kompas, grafik cuaca dan iklim (semuanya SVG)
+│   └── app.js          keadaan aplikasi, tampilan lima halaman, interaksi
 ├── tests/logic.test.js uji otomatis fungsi logika (Node.js, tanpa pustaka tambahan)
+├── tools/buat-iklim.js pembuat js/iklim.js dari NASA POWER (cukup dijalankan sekali)
 ├── .vscode/            rekomendasi ekstensi dan pengaturan Live Server
 └── README.md
 ```
 
-Urutan pemuatan skrip di `index.html` penting: `kunci.js` → `data.js` → `logic.js` → `api.js` → `svg.js` → `app.js`.
+Urutan pemuatan skrip di `index.html` penting: `kunci.js` → `data.js` → `iklim.js` → `logic.js` → `api.js` → `svg.js` → `app.js`.
 
 ## Langkah awal di VS Code
 
@@ -41,7 +46,7 @@ Urutan pemuatan skrip di `index.html` penting: `kunci.js` → `data.js` → `log
 4. Klik kanan `index.html` → **Open with Live Server**, atau klik **Go Live** di pojok kanan bawah.
 5. Peramban terbuka di `http://127.0.0.1:5500`. Setiap berkas disimpan, halaman dimuat ulang sendiri.
 
-Membuka `index.html` dengan klik dua kali juga bisa, tetapi Live Server lebih disarankan karena perilakunya sama dengan situs yang sudah dipublikasikan. Tautan langsung ke halaman tertentu: `index.html#hari`, `#riau`, `#rencana`, `#catatan`.
+Membuka `index.html` dengan klik dua kali juga bisa, tetapi Live Server lebih disarankan karena perilakunya sama dengan situs yang sudah dipublikasikan. Tautan langsung ke halaman tertentu: `index.html#hari`, `#cuaca`, `#riau`, `#rencana`, `#catatan`.
 
 ### Membuka di ponsel
 
@@ -63,7 +68,7 @@ Butuh [Node.js](https://nodejs.org/) versi 16 atau lebih baru. Di terminal VS Co
 node tests/logic.test.js
 ```
 
-Semua baris harus berstatus `ok` dan baris terakhir menyatakan `66 uji lulus`. Uji mencakup data referensi, batas kategori, saran per kelompok, tren, jam aman, asap kiriman, pola gejala, pembaca respons API (Open-Meteo, BMKG, WAQI, petak vektor NASA), ISPU, titik panas di arah datangnya angin, kontras warna, dan pembuat SVG. Tampilan di layar tidak diuji oleh berkas ini; pengujian tampilan pada laporan KP memakai Playwright terpisah.
+Semua baris harus berstatus `ok` dan baris terakhir menyatakan `75 uji lulus`. Uji mencakup data referensi, batas kategori, saran per kelompok, tren, jam aman, asap kiriman, pola gejala, pembaca respons API (Open-Meteo, BMKG, WAQI, petak vektor NASA), ISPU, titik panas di arah datangnya angin, normal iklim, hari tanpa hujan, hujan dibanding normal, kontras warna, dan pembuat SVG termasuk grafik halaman Cuaca. Tampilan di layar tidak diuji oleh berkas ini; pengujian tampilan pada laporan KP memakai Playwright terpisah.
 
 ### Mengaktifkan hasil ukur stasiun (token WAQI)
 
@@ -141,6 +146,12 @@ Font **Atkinson Hyperlegible** dan **Bricolage Grotesque** dimuat dari Google Fo
 
 - **Sumber:** [Open-Meteo](https://open-meteo.com/) Air Quality API (`us_aqi`, model CAMS) dan Forecast API (angin permukaan). Tanpa kunci API. Gratis untuk penggunaan nonkomersial dan menuntut atribusi, yang sudah ada di kaki halaman. Periksa ketentuan terbaru bila web dipakai di luar keperluan akademik.
 - **BMKG:** prakiraan cuaca resmi per 3 jam dari `api.bmkg.go.id/publik/prakiraan-cuaca` (data terbuka BMKG, wajib mencantumkan BMKG sebagai sumber; batas 60 permintaan/menit per IP). Satu kelurahan di pusat ibu kota tiap wilayah (kode `bm` di `js/data.js`). Dipakai untuk suhu, kelembapan, angin, dan kondisi cuaca termasuk "Udara Kabur" dan "Kabut/Asap". BMKG tidak menyediakan angka kualitas udara/ISPU lewat layanan terbuka, jadi angka AQI tetap dari Open-Meteo.
+- **Halaman Cuaca:**
+  - *Cuaca 3 hari:* prakiraan BMKG yang sama dengan halaman Hari ini (24 periode tiga jam). Panah angin menunjuk ke arah angin bertiup.
+  - *Prakiraan 14 hari dan hari tanpa hujan:* Open-Meteo Forecast API (`daily`, `past_days=92`, `forecast_days=16`, satu permintaan untuk 12 titik, cache 3 jam). Ini model cuaca global, bukan BMKG; untuk 3 hari ke depan utamakan BMKG. Hari disebut hujan bila minimal 1 mm. Kategori hari tanpa hujan mengikuti BMKG: 1–5 sangat pendek, 6–10 pendek, 11–20 menengah, 21–30 panjang, 31–60 sangat panjang, lebih dari 60 ekstrem panjang (`HTH_KAT` di `js/data.js`). BMKG menerbitkan peta hari tanpa hujan resmi tiap dasarian.
+  - *Hujan 90 hari dibanding normal:* NASA POWER daily API (`PRECTOTCORR`, reanalisis MERRA-2/GEOS), satu permintaan per wilayah saat wilayah itu dilihat (cache 12 jam). Datanya tertinggal 3–5 hari. Sumbernya sama dengan normal iklim, jadi persentasenya sebanding. Sifat hujan memakai batas BMKG (bawah normal < 85 %, normal 85–115 %, atas normal > 115 %, `SIFAT_HUJAN`); BMKG memakainya untuk jumlah bulanan, di sini diterapkan pada 90 hari.
+  - *Iklim bulanan:* normal 1991–2020 (periode normal yang juga dipakai BMKG) dari NASA POWER Climatology API, disimpan tetap di `js/iklim.js` (jalankan ulang `node tools/buat-iklim.js` hanya bila titik data berubah). Resolusi sekitar 50 km, jadi Pekanbaru dan Kampar memakai sel grid yang sama. Bulan relatif kering = normal di bawah 85 % rata-rata bulanan wilayah itu (`AMBANG_KERING`); ini patokan rancangan, bukan penetapan musim oleh BMKG. Riau berpola hujan dua puncak sehingga banyak wilayahnya tidak punya musim kemarau tegas; bulan relatif kering Pekanbaru (Februari, Juni–Agustus) bertepatan dengan periode yang biasanya rawan kebakaran lahan.
+  - Data harian dan NASA POWER baru diminta saat halaman Cuaca dibuka, sehingga tidak membebani pengguna yang tidak membukanya.
 - **PM2.5 jam ini:** US AQI Open-Meteo memakai rata-rata 24 jam sehingga lambat berubah. Kadar PM2.5 jam ini ditampilkan terpisah beserta AQI setaranya (tabel EPA 2024, `aqiPM25` di `js/logic.js`).
 - **Pembaruan otomatis:** web statis tidak dapat menerima kiriman dari server, dan sumber data juga tidak mengirim kabar perubahan. Karena itu, selama halaman terbuka dan terlihat, setiap menit diperiksa sumber mana yang sudah melewati masa simpannya, lalu diambil ulang di latar tanpa mengosongkan tampilan: data udara dan hasil ukur tiap 15 menit, cuaca BMKG dan titik panas tiap 1 jam. Bila kategori udara wilayah terpilih berubah atau muncul titik panas baru di arah datangnya angin, tampil pemberitahuan. Percobaan yang gagal diulang paling cepat 5 menit kemudian. Pembaruan dijeda pada mode simulasi, saat tab tersembunyi, dan saat tanpa sambungan; begitu tab dibuka kembali atau sambungan pulih, data langsung diperiksa. Statusnya tertulis di **Pengaturan → Pembaruan otomatis** (lihat `segarkan` di `js/app.js`).
 - **Jumlah panggilan:** satu permintaan berisi 12 titik untuk tiap API Open-Meteo (dua panggilan per muat). Bila gagal, kode mencoba per wilayah. Hasil disimpan 15 menit di `localStorage`; bila jaringan putus, data lama (maks. 3 jam) tampil dengan label "Data lama". Pelengkap dimuat terpisah dan tidak menghambat data udara: BMKG 12 permintaan (cache 1 jam), NASA GIBS 12 petak sekitar 1–2 MB (cache 1 jam), WAQI 2 permintaan (cache 15 menit, hanya bila token diisi).
@@ -170,7 +181,10 @@ Font **Atkinson Hyperlegible** dan **Bricolage Grotesque** dimuat dari Google Fo
 | Kartu hasil ukur dan titik panas | `js/app.js` → `kartuUkur`, `kartuApi` |
 | Jadwal pembaruan otomatis dan pemberitahuan perubahan | `js/app.js` → `segarkan`, `beritaUbah`; masa simpan tiap sumber di `js/api.js` (`CACHE_SEGAR`, `BMKG_SEGAR`, `API_SEGAR`, `WAQI_SEGAR`) |
 | Aturan jam aman per kegiatan | `js/data.js` → `KEGIATAN` dan `js/logic.js` → `windows`, `rentang`, `alternatif` |
-| Tampilan tiap halaman | `js/app.js` → `viewHari`, `viewRiau`, `viewRencana`, `viewCatatan` |
+| Tampilan tiap halaman | `js/app.js` → `viewHari`, `viewCuaca`, `viewRiau`, `viewRencana`, `viewCatatan` |
+| Kartu halaman Cuaca | `js/app.js` → `kartuCuaca3`, `kartu14`, `kartuKering`, `kartuIklim`; grafiknya `js/svg.js` → `grafikBMKG`, `grafik14`, `grafik90`, `grafikIklim` |
+| Batas hari hujan, kategori hari tanpa hujan, sifat hujan, bulan relatif kering | `js/data.js` → `AMBANG_HUJAN`, `HTH_KAT`, `SIFAT_HUJAN`, `AMBANG_KERING` |
+| Warna grafik cuaca (hujan, suhu) | `css/style.css` → `--hujan`, `--suhu` (diuji aman untuk buta warna dan kontras 3 : 1 pada tema terang dan gelap) |
 
 Setelah mengubah `data.js` atau `logic.js`, jalankan lagi `node tests/logic.test.js`. Bila teks saran diubah, sesuaikan juga tabel pada laporan KP agar tetap sama.
 

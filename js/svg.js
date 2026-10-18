@@ -331,3 +331,201 @@ function garisWaktu(H, lim, w, label) {
   }
   return '<svg class="gwk" viewBox="0 0 ' + W + ' ' + Ht + '" width="100%" role="img" aria-label="' + (label || 'Garis waktu 48 jam').replace(/"/g, '&quot;') + '">' + s + '</svg>';
 }
+
+/* ---------- grafik halaman Cuaca ----------
+   Tanda tipis (garis 2 px, batang paling lebar 24 px dengan ujung data membulat 4 px),
+   garis bantu tipis tanpa putus, dan satu sumbu per panel: suhu dan hujan tidak pernah
+   digambar dengan dua sumbu pada satu plot, melainkan dua panel bertumpuk dengan sumbu
+   waktu yang sama. Warna data: --suhu dan --hujan (lihat css/style.css). Teks memakai
+   warna teks, bukan warna data. Nilai tiap titik ada di tooltip (GRAFIK[id].tip) dan di
+   tabel di bawah grafik (app.js). */
+const escT = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const tglS = t => +t.slice(8, 10) + ' ' + NAMA_BULAN[+t.slice(5, 7) - 1].slice(0, 3);
+const bulatAtas = v => { const st = v <= 100 ? 20 : v <= 300 ? 50 : v <= 1000 ? 100 : 200; return Math.max(st, Math.ceil(v / st) * st); };
+
+/* Garis bantu mendatar dengan label sumbu-y (teks boleh null) */
+function garisY(l, pw, y, teks) {
+  return '<line class="gb" x1="' + l + '" x2="' + (l + pw) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"/>' +
+    (teks == null ? '' : '<text class="ax" x="' + (l - 6) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end">' + teks + '</text>');
+}
+
+/* Batang dari dasar y0 ke puncak y1 (y1 < y0): ujung data membulat, dasar persegi */
+function batang(x, y0, y1, bw, cls) {
+  const h = y0 - y1;
+  if (h < 0.5) return '';
+  const r = Math.min(4, bw / 2, h), a = (x - bw / 2).toFixed(1), b = (x + bw / 2).toFixed(1), q = (y1 + r).toFixed(1), y = y1.toFixed(1);
+  return '<path class="' + cls + '" d="M' + a + ' ' + y0.toFixed(1) + 'V' + q + 'Q' + a + ' ' + y + ' ' + (x - bw / 2 + r).toFixed(1) + ' ' + y +
+    'H' + (x + bw / 2 - r).toFixed(1) + 'Q' + b + ' ' + y + ' ' + b + ' ' + q + 'V' + y0.toFixed(1) + 'Z"/>';
+}
+
+/* Pembungkus grafik bertooltip, sama dengan grafik AQI */
+function bungkus(id, W, Ht, s, label) {
+  return '<div class="chartw" data-ch="' + id + '"><svg viewBox="0 0 ' + W + ' ' + Ht + '" width="100%" role="img" aria-label="' + escT(label || '') + '">' + s + '</svg><div class="tip" hidden></div></div>';
+}
+
+/* Garis silang dan titik penanda untuk tooltip, serta area sentuh */
+function silang(l, pw, y0, y1, Ht) {
+  return '<line class="xh" y1="' + y0 + '" y2="' + y1 + '" stroke="var(--ink)" stroke-width="1.2" style="display:none"/>' +
+    '<circle class="xd" r="5" fill="var(--sf)" stroke="var(--ink)" stroke-width="2.5" style="display:none"/>' +
+    '<rect class="hit" x="' + l + '" y="0" width="' + pw + '" height="' + Ht + '" fill="transparent"/>';
+}
+
+/* 1. Prakiraan BMKG per 3 jam. J = [{t, suhu, hu, ws, wd, cuaca, tp}], o = {w, now, label}.
+   Panel suhu (garis), panel hujan (batang mm per 3 jam), baris arah angin (panah ke arah
+   angin bertiup), lalu jam dan hari. */
+function grafikBMKG(id, J, o) {
+  const W = Math.round(o.w || 340), l = 34, r = 10, n = J.length, pw = W - l - r, sl = pw / n;
+  const t1 = 26, h1 = 96, t2 = t1 + h1 + 36, h2 = 54, ta = t2 + h2 + 34, Ht = ta + 46;
+  const X = i => l + (i + .5) * sl;
+  /* ruang 2 °C di bawah suhu terendah untuk labelnya, 1 °C di atas tertinggi */
+  const su = J.map(x => x.suhu), lo = Math.floor(Math.min(...su)) - 2, hi = Math.ceil(Math.max(...su)) + 1;
+  const Y1 = v => t1 + h1 - (v - lo) / (hi - lo) * h1;
+  const hj = J.map(x => Math.max(0, +x.tp || 0)), hmax = Math.max(5, Math.ceil(Math.max(...hj)));
+  const Y2 = v => t2 + h2 - Math.min(v, hmax) / hmax * h2;
+  let s = '<text class="ax b" x="' + l + '" y="' + (t1 - 12) + '">Suhu (°C)</text><text class="ax b" x="' + l + '" y="' + (t2 - 12) + '">Hujan (mm per 3 jam)</text>';
+  [lo, Math.round((lo + hi) / 2), hi].forEach(v => { s += garisY(l, pw, Y1(v), v); });
+  [0, hmax].forEach(v => { s += garisY(l, pw, Y2(v), v); });
+
+  /* pemisah hari dan label hari di tengah tiap hari */
+  let a = 0;
+  for (let i = 1; i <= n; i++) {
+    if (i < n && J[i].t.slice(0, 10) === J[i - 1].t.slice(0, 10)) continue;
+    if (i < n) s += '<line class="gb" x1="' + (l + i * sl).toFixed(1) + '" x2="' + (l + i * sl).toFixed(1) + '" y1="' + (t1 - 4) + '" y2="' + (ta + 30) + '"/>';
+    if ((i - a) * sl >= 44) s += '<text class="ax b" x="' + (l + (a + i) / 2 * sl).toFixed(1) + '" y="' + (Ht - 4) + '" text-anchor="middle">' + dayLabel(J[a].t, o.now) + '</text>';
+    a = i;
+  }
+  /* jam: pagi dan malam (07.00 dan 19.00) */
+  J.forEach((x, i) => {
+    const hh = +x.t.slice(11, 13);
+    if ((hh === 7 || hh === 19) && sl * 4 >= 30) s += '<text class="ax" x="' + X(i).toFixed(1) + '" y="' + (ta + 24) + '" text-anchor="middle">' + x.t.slice(11, 13) + '.00</text>';
+  });
+
+  /* hujan */
+  const bw = Math.min(24, Math.max(2, sl - 3));
+  if (hj.some(v => v > 0)) hj.forEach((v, i) => { s += batang(X(i), Y2(0), Y2(v), bw, 'bh'); });
+  else s += '<text class="ax" x="' + (l + pw / 2) + '" y="' + (t2 + h2 / 2 + 4) + '" text-anchor="middle">Tidak ada hujan diprakirakan</text>';
+
+  /* angin */
+  s += '<text class="ax b" x="' + l + '" y="' + (ta - 14) + '">Arah angin</text>';
+  J.forEach((x, i) => {
+    if (x.wd == null || (sl < 11 && i % 2)) return;
+    s += '<path class="pa" d="M0 -5L3.4 3L0 1.2L-3.4 3Z" transform="translate(' + X(i).toFixed(1) + ' ' + ta + ') rotate(' + Math.round((x.wd + 180) % 360) + ')"/>';
+  });
+
+  /* suhu: garis, lalu penanda dan label hanya pada tertinggi dan terendah */
+  s += '<polyline class="ls" points="' + J.map((x, i) => X(i).toFixed(1) + ',' + Y1(x.suhu).toFixed(1)).join(' ') + '"/>';
+  const kmx = su.indexOf(Math.max(...su)), kmn = su.indexOf(Math.min(...su));
+  /* tertinggi di atas titiknya; terendah di bawah titiknya, masih di dalam panel suhu */
+  const an = k => k < 2 ? 'start' : k > n - 3 ? 'end' : 'middle';
+  [[kmx, -10], [kmn, 16]].forEach(([k, dy]) => {
+    s += '<circle class="ds" cx="' + X(k).toFixed(1) + '" cy="' + Y1(su[k]).toFixed(1) + '" r="4"/>' +
+      '<text class="ax b halo" x="' + X(k).toFixed(1) + '" y="' + (Y1(su[k]) + dy).toFixed(1) + '" text-anchor="' + an(k) + '">' + su[k] + '°</text>';
+  });
+  s += silang(l, pw, t1 - 4, ta + 8, Ht);
+
+  GRAFIK[id] = {
+    idx: x => Math.max(0, Math.min(n - 1, Math.floor((x - l) / sl))), px: X, py: i => Y1(su[i]), W,
+    tip: i => {
+      const x = J[i];
+      return '<b>' + x.suhu + '°C · ' + escT(x.cuaca) + '</b><br>' + dayLabel(x.t, o.now) + ' ' + jam(x.t) + ' WIB<br>Hujan ' + hj[i] + ' mm' +
+        (x.hu != null ? ' · lembap ' + x.hu + '%' : '') + (x.ws != null ? '<br>Angin ' + x.ws + ' km/jam' + (x.wd != null ? ' dari ' + compass(x.wd) : '') : '');
+    }
+  };
+  return bungkus(id, W, Ht, s, o.label);
+}
+
+/* 2. Prakiraan harian. D = [{t, tx, tn, ch, pp}], o = {w, hariIni, label}.
+   Panel suhu (batang rentang terendah–tertinggi) dan panel peluang hujan (batang 0–100 %). */
+function grafik14(id, D, o) {
+  const W = Math.round(o.w || 340), l = 34, r = 10, n = D.length, pw = W - l - r, sl = pw / n;
+  const t1 = 26, h1 = 92, t2 = t1 + h1 + 36, h2 = 54, ta = t2 + h2, Ht = ta + 40;
+  const X = i => l + (i + .5) * sl;
+  const tx = D.map(x => x.tx).filter(v => v != null), tn = D.map(x => x.tn).filter(v => v != null);
+  const lo = Math.floor(Math.min(...tn)) - 1, hi = Math.ceil(Math.max(...tx)) + 1;
+  const Y1 = v => t1 + h1 - (v - lo) / (hi - lo) * h1, Y2 = p => t2 + h2 - p / 100 * h2;
+  let s = '<text class="ax b" x="' + l + '" y="' + (t1 - 12) + '">Suhu terendah–tertinggi (°C)</text><text class="ax b" x="' + l + '" y="' + (t2 - 12) + '">Peluang hujan (%)</text>';
+  [lo, Math.round((lo + hi) / 2), hi].forEach(v => { s += garisY(l, pw, Y1(v), v); });
+  [0, 50, 100].forEach(v => { s += garisY(l, pw, Y2(v), v); });
+
+  const bw = Math.min(12, Math.max(4, sl * .42)), bw2 = Math.min(24, Math.max(3, sl - 5)), lompat = sl >= 26 ? 1 : 2;
+  D.forEach((x, i) => {
+    if (x.tx != null && x.tn != null) s += '<rect class="bs" x="' + (X(i) - bw / 2).toFixed(1) + '" y="' + Y1(x.tx).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, Y1(x.tn) - Y1(x.tx)).toFixed(1) + '" rx="' + Math.min(4, bw / 2).toFixed(1) + '"/>';
+    if (x.pp != null) s += batang(X(i), Y2(0), Y2(x.pp), bw2, 'bh');
+    if (i % lompat) return;
+    const b = x.t === o.hariIni ? ' b' : '';
+    s += '<text class="ax' + b + '" x="' + X(i).toFixed(1) + '" y="' + (ta + 16) + '" text-anchor="middle">' + namaHari(x.t) + '</text>' +
+         '<text class="ax' + b + '" x="' + X(i).toFixed(1) + '" y="' + (ta + 32) + '" text-anchor="middle">' + +x.t.slice(8, 10) + '</text>';
+  });
+  /* label hanya pada suhu tertinggi dan terendah dalam rentang */
+  const imx = D.reduce((m, x, i) => x.tx != null && (m < 0 || x.tx > D[m].tx) ? i : m, -1);
+  const imn = D.reduce((m, x, i) => x.tn != null && (m < 0 || x.tn < D[m].tn) ? i : m, -1);
+  const an = k => k < 1 ? 'start' : k > n - 2 ? 'end' : 'middle';
+  if (imx >= 0) s += '<text class="ax b halo" x="' + X(imx).toFixed(1) + '" y="' + (Y1(D[imx].tx) - 6).toFixed(1) + '" text-anchor="' + an(imx) + '">' + Math.round(D[imx].tx) + '°</text>';
+  if (imn >= 0) s += '<text class="ax b halo" x="' + X(imn).toFixed(1) + '" y="' + (Y1(D[imn].tn) + 15).toFixed(1) + '" text-anchor="' + an(imn) + '">' + Math.round(D[imn].tn) + '°</text>';
+  s += silang(l, pw, t1 - 4, ta, Ht);
+
+  GRAFIK[id] = {
+    idx: x => Math.max(0, Math.min(n - 1, Math.floor((x - l) / sl))), px: X, py: i => D[i].tx == null ? null : Y1(D[i].tx), W,
+    tip: i => {
+      const x = D[i];
+      return '<b>' + (x.tn != null && x.tx != null ? Math.round(x.tn) + '–' + Math.round(x.tx) + '°C' : 'Suhu tidak tersedia') + '</b><br>' + namaHari(x.t) + ', ' + tglS(x.t) +
+        '<br>Peluang hujan ' + (x.pp != null ? x.pp + '%' : '–') + (x.ch != null ? ' · ' + x.ch + ' mm' : '');
+    }
+  };
+  return bungkus(id, W, Ht, s, o.label);
+}
+
+/* 3. Jumlah hujan berjalan n hari dibanding normal. R = [{t, ch, kum, kumN}] (hujanVsNormal),
+   o = {w, label}. Garis tercatat (2 px) dan garis normal sebagai rujukan (putus-putus). */
+function grafik90(id, R, o) {
+  const W = Math.round(o.w || 340), l = 42, r = 12, t = 16, ph = 150, Ht = t + ph + 30, n = R.length, pw = W - l - r;
+  const X = i => l + (n > 1 ? i * pw / (n - 1) : 0);
+  const ymax = bulatAtas(Math.max(R[n - 1].kum, R[n - 1].kumN, 10) * 1.08), Y = v => t + ph - v / ymax * ph;
+  let s = '';
+  [0, ymax / 2, ymax].forEach(v => { s += garisY(l, pw, Y(v), v); });
+  R.forEach((x, i) => {
+    if (i !== 0 && x.t.slice(8, 10) !== '01') return;
+    if (i !== 0 && X(i) < l + 60) return;   // jangan menimpa label tanggal pertama
+    s += '<text class="ax" x="' + X(i).toFixed(1) + '" y="' + (Ht - 8) + '" text-anchor="' + (i === 0 ? 'start' : 'middle') + '">' + tglS(x.t) + '</text>';
+  });
+  s += '<polyline class="lnorm" points="' + R.map((x, i) => X(i).toFixed(1) + ',' + Y(x.kumN).toFixed(1)).join(' ') + '"/>' +
+       '<polyline class="lh" points="' + R.map((x, i) => X(i).toFixed(1) + ',' + Y(x.kum).toFixed(1)).join(' ') + '"/>' +
+       '<circle class="dh" cx="' + X(n - 1).toFixed(1) + '" cy="' + Y(R[n - 1].kum).toFixed(1) + '" r="4"/>';
+  /* label di ujung kanan; bila berdekatan, yang lebih tinggi diletakkan di atas */
+  let ya = Y(R[n - 1].kum), yn = Y(R[n - 1].kumN);
+  if (Math.abs(ya - yn) < 18) { const m = (ya + yn) / 2, atas = ya <= yn; ya = m + (atas ? -10 : 10); yn = m + (atas ? 10 : -10); }
+  const atasA = ya <= yn;
+  s += '<text class="ax b halo" x="' + (X(n - 1) - 8).toFixed(1) + '" y="' + (atasA ? ya - 6 : ya + 14).toFixed(1) + '" text-anchor="end">Tercatat ' + R[n - 1].kum + ' mm</text>' +
+       '<text class="ax halo" x="' + (X(n - 1) - 8).toFixed(1) + '" y="' + (atasA ? yn + 14 : yn - 6).toFixed(1) + '" text-anchor="end">Normal ' + R[n - 1].kumN + ' mm</text>';
+  s += silang(l, pw, t, t + ph, Ht);
+  GRAFIK[id] = {
+    idx: x => Math.max(0, Math.min(n - 1, Math.round((x - l) / (pw / Math.max(1, n - 1))))), px: X, py: i => Y(R[i].kum), W,
+    tip: i => '<b>' + R[i].kum + ' mm</b> tercatat · normal ' + R[i].kumN + ' mm<br>Sampai ' + tglS(R[i].t) + ' (hujan hari itu ' + R[i].ch + ' mm)'
+  };
+  return bungkus(id, W, Ht, s, o.label);
+}
+
+/* 4. Normal iklim bulanan. I = {hh, t, tx, tn} (IKLIM), kering = [benar/salah] x 12,
+   bulanIni = 0..11, o = {w, label}. Batang curah hujan normal; bulan relatif kering diberi
+   latar, bulan ini ditebalkan dan diberi titik. */
+function grafikIklim(id, I, kering, bulanIni, o) {
+  const W = Math.round(o.w || 340), l = 42, r = 10, t = 30, ph = 140, ta = t + ph, Ht = ta + 34, pw = W - l - r, sl = pw / 12;
+  const mm = normalBulanan(I.hh), ymax = bulatAtas(Math.max(...mm) * 1.12), Y = v => ta - v / ymax * ph, X = m => l + (m + .5) * sl;
+  let s = '';
+  kering.forEach((k, m) => { if (k) s += '<rect class="wk" x="' + (l + m * sl + 1).toFixed(1) + '" y="' + (t - 8) + '" width="' + (sl - 2).toFixed(1) + '" height="' + (ph + 8) + '" rx="5"/>'; });
+  [0, ymax / 2, ymax].forEach(v => { s += garisY(l, pw, Y(v), v); });
+  const bw = Math.min(24, Math.max(4, sl - 8)), imx = mm.indexOf(Math.max(...mm)), imn = mm.indexOf(Math.min(...mm));
+  mm.forEach((v, m) => {
+    s += batang(X(m), Y(0), Y(v), bw, 'bh');
+    if (m === imx || m === imn) s += '<text class="ax b halo" x="' + X(m).toFixed(1) + '" y="' + (Y(v) - 6).toFixed(1) + '" text-anchor="middle">' + v + '</text>';
+    const b = m === bulanIni;
+    s += '<text class="ax' + (b ? ' b' : '') + '" x="' + X(m).toFixed(1) + '" y="' + (ta + 16) + '" text-anchor="middle">' + NAMA_BULAN[m].slice(0, 3) + '</text>' +
+         (b ? '<circle cx="' + X(m).toFixed(1) + '" cy="' + (ta + 26) + '" r="3" fill="var(--ink)"/>' : '');
+  });
+  s += silang(l, pw, t, ta, Ht);
+  GRAFIK[id] = {
+    idx: x => Math.max(0, Math.min(11, Math.floor((x - l) / sl))), px: X, py: () => null, noLine: true, W,
+    tip: m => '<b>' + mm[m] + ' mm</b> · ' + NAMA_BULAN[m] + (kering[m] ? ' (relatif kering)' : '') + '<br>Suhu ' + Math.round(I.tn[m]) + '–' + Math.round(I.tx[m]) + '°C, rata-rata ' + I.t[m] + '°C'
+  };
+  return bungkus(id, W, Ht, s, o.label);
+}

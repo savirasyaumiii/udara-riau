@@ -197,3 +197,38 @@ async function ambilTitikApi(nowMs) {
 
 const bacaApi = () => bacaSimpan(API_KEY, D => D && Array.isArray(D.T));
 const tulisApi = D => tulisSimpan(API_KEY, D);
+
+/* ---------- Open-Meteo harian: 92 hari lalu + 16 hari ke depan (halaman Cuaca) ----------
+   Satu permintaan untuk 12 titik. Prakiraan harian diperbarui beberapa kali sehari, jadi
+   cache 3 jam dan cadangan data lama maks. 24 jam. Dimuat saat halaman Cuaca pertama dibuka. */
+const HARIAN_KEY = 'udarariau-harian';
+const HARIAN_SEGAR = 3 * 60 * 60 * 1000;
+const HARIAN_LAMA = 24 * 60 * 60 * 1000;
+
+/* Hasil: array sepanjang `list`, elemen hasil parseHarian atau null */
+async function ambilHarian(list) {
+  const q = 'latitude=' + list.map(c => c.la).join(',') + '&longitude=' + list.map(c => c.lo).join(',') +
+    '&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&past_days=92&forecast_days=16&timezone=Asia%2FBangkok';
+  const A = sebagaiArray(await ambilJSON(API.cuaca + '?' + q, 15000));
+  if (A.length !== list.length) throw new Error('bentuk respons tidak sesuai');
+  return A.map(parseHarian);
+}
+
+const bacaHarian = () => bacaSimpan(HARIAN_KEY, D => Array.isArray(D) && D.length === WILAYAH.length && D.some(Boolean));
+const tulisHarian = D => tulisSimpan(HARIAN_KEY, D);
+
+/* ---------- NASA POWER: curah hujan harian (sumber yang sama dengan normal iklim) ----------
+   Datanya tertinggal sekitar 3–5 hari. Satu permintaan per wilayah, hanya wilayah terpilih;
+   cache 12 jam dan cadangan data lama maks. 3 hari. */
+const POWER_SEGAR = 12 * 60 * 60 * 1000;
+const POWER_LAMA = 3 * 24 * 60 * 60 * 1000;
+
+/* 120 hari terakhir untuk titik w. Hasil: hasil parsePOWER (bisa null). */
+async function ambilPOWER(w, nowMs) {
+  const tgl = ms => wibStamp(ms).slice(0, 10).replace(/-/g, '');
+  return parsePOWER(await ambilJSON(API.power + '?parameters=PRECTOTCORR&community=AG&longitude=' + w.lo + '&latitude=' + w.la +
+    '&format=JSON&start=' + tgl(nowMs - 120 * 864e5) + '&end=' + tgl(nowMs), 20000));
+}
+
+const bacaPOWER = i => bacaSimpan('udarariau-power-' + i, D => Array.isArray(D) && D.length > 0);
+const tulisPOWER = (i, D) => tulisSimpan('udarariau-power-' + i, D);

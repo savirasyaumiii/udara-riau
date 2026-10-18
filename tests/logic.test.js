@@ -10,7 +10,7 @@ const assert = require('assert');
    Berkas yang belum dibuat dilewati, jadi uji ini sudah bisa dijalankan sejak tahap awal.
    TextDecoder (dipakai bacaMVT) bukan bawaan konteks vm, jadi diteruskan dari Node. */
 const ctx = vm.createContext({ TextDecoder });
-['data.js', 'logic.js', 'svg.js'].forEach(f => {
+['data.js', 'iklim.js', 'logic.js', 'svg.js'].forEach(f => {
   const p = path.join(__dirname, '..', 'js', f);
   if (fs.existsSync(p)) vm.runInContext(fs.readFileSync(p, 'utf8'), ctx);
 });
@@ -46,7 +46,7 @@ uji('ada 12 wilayah dengan koordinat di sekitar Riau dan posisi label valid', ()
   });
   assert.strictEqual(new Set(WILAYAH.map(w => w.s)).size, 12);
 });
-uji('data pendamping sesuai: 6 kategori, 3 saran per kategori, 6 kelompok, 8 kegiatan, 6 butir kesiapan, 4 tab', () => {
+uji('data pendamping sesuai: 6 kategori, 3 saran per kategori, 6 kelompok, 8 kegiatan, 6 butir kesiapan, 5 tab', () => {
   assert.strictEqual(SIM_FAKTOR.length, WILAYAH.length);
   assert.strictEqual(KATEGORI.length, 6);
   assert.strictEqual(SARAN.length, 6);
@@ -55,7 +55,7 @@ uji('data pendamping sesuai: 6 kategori, 3 saran per kategori, 6 kelompok, 8 keg
   assert.strictEqual(PROFIL.filter(p => p.tambahan).length, 5);
   assert.strictEqual(KEGIATAN.length, 8);
   assert.strictEqual(KESIAPAN.length, 6);
-  assert.strictEqual(TAB.length, 4);
+  assert.strictEqual(TAB.length, 5);
 });
 uji('batas kategori naik dan kegiatan terurut menurut batas', () => {
   for (let i = 1; i < KATEGORI.length; i++) assert.ok(KATEGORI[i].max > KATEGORI[i - 1].max);
@@ -631,4 +631,91 @@ uji('peta: titik panas dan stasiun digambar di bawah gelembung tanpa menambah to
   assert.ok(s.indexOf('class="ap"') < s.indexOf('data-c="'));
   assert.ok(!/NaN|undefined/.test(s));
   assert.ok(!/class="(ap|stu)"/.test(peta(Dm, 0, null, 340, 1, null)));
+});
+
+const [IKLIM, HTH_KAT, SIFAT_HUJAN, parseHarian, hariTanpaHujan, kategoriHTH, parsePOWER, hujanVsNormal, normalBulanan, bulanKering, namaHari] =
+  ambil('IKLIM', 'HTH_KAT', 'SIFAT_HUJAN', 'parseHarian', 'hariTanpaHujan', 'kategoriHTH', 'parsePOWER', 'hujanVsNormal', 'normalBulanan', 'bulanKering', 'namaHari');
+const [grafikBMKG, grafik14, grafik90, grafikIklim, GRAFIK] = ambil('grafikBMKG', 'grafik14', 'grafik90', 'grafikIklim', 'GRAFIK');
+
+/* Hari berurutan mulai t0 ('YYYY-MM-DD'), n hari, isi f(k, t) */
+const hariBerurut = (t0, n, f) => Array.from({ length: n }, (_, k) => { const t = new Date(Date.parse(t0 + 'T00:00:00Z') + k * 864e5).toISOString().slice(0, 10); return f(k, t); });
+
+console.log('Cuaca harian dan iklim');
+uji('normal iklim 1991–2020: 12 wilayah x 12 bulan dengan nilai yang masuk akal', () => {
+  assert.strictEqual(IKLIM.length, WILAYAH.length);
+  IKLIM.forEach((I, i) => {
+    ['hh', 't', 'tx', 'tn'].forEach(k => assert.strictEqual(I[k].length, 12, WILAYAH[i].s + ' ' + k));
+    I.hh.forEach(v => assert.ok(v > 1 && v < 20, WILAYAH[i].s + ' hujan ' + v));
+    I.t.forEach((v, m) => assert.ok(v > 20 && v < 32 && I.tn[m] < v && v < I.tx[m], WILAYAH[i].s + ' suhu bulan ' + (m + 1)));
+  });
+});
+uji('normal bulanan dan bulan relatif kering (Pekanbaru: Februari, Juni, Juli, Agustus)', () => {
+  const mm = normalBulanan(IKLIM[0].hh);
+  assert.strictEqual(mm[0], Math.round(IKLIM[0].hh[0] * 31));
+  assert.strictEqual(mm[1], Math.round(IKLIM[0].hh[1] * 28.25));
+  samaJSON(bulanKering(IKLIM[0].hh).map((k, m) => k ? m + 1 : 0).filter(Boolean), [2, 6, 7, 8]);
+  samaJSON(bulanKering(new Array(12).fill(5)), new Array(12).fill(false));
+});
+uji('parseHarian membaca data harian Open-Meteo; nilai kosong menjadi null', () => {
+  const D = parseHarian({ daily: { time: ['2026-10-18', '2026-10-19'], temperature_2m_max: [32.26, null], temperature_2m_min: [24.04, 23.9],
+    precipitation_sum: [5.64, 0], precipitation_probability_max: [80, 10] } });
+  samaJSON(D, [{ t: '2026-10-18', tx: 32.3, tn: 24, ch: 5.6, pp: 80 }, { t: '2026-10-19', tx: null, tn: 23.9, ch: 0, pp: 10 }]);
+  assert.strictEqual(parseHarian({ daily: { time: [] } }), null);
+  assert.strictEqual(parseHarian(null), null);
+});
+uji('hari tanpa hujan dihitung mundur dari kemarin; hujan >= 1 mm menghentikan hitungan', () => {
+  const D = hariBerurut('2026-10-01', 25, (k, t) => ({ t, ch: k === 5 ? 8 : k === 6 ? 0.9 : k < 5 ? 3 : 0.2 }));   // hujan terakhir 6 Okt
+  samaJSON(hariTanpaHujan(D, '2026-10-19'), { n: 12, akhir: { t: '2026-10-06', ch: 8 }, lengkap: true });   // 7–18 Okt
+  samaJSON(hariTanpaHujan(D, '2026-10-07'), { n: 0, akhir: { t: '2026-10-06', ch: 8 }, lengkap: true });   // hujan kemarin
+  const kering = hariBerurut('2026-10-01', 10, (k, t) => ({ t, ch: 0 }));
+  samaJSON(hariTanpaHujan(kering, '2026-10-11'), { n: 10, akhir: null, lengkap: false });
+  const bolong = hariBerurut('2026-10-01', 10, (k, t) => ({ t, ch: k === 6 ? null : 0 }));
+  samaJSON(hariTanpaHujan(bolong, '2026-10-11'), { n: 3, akhir: null, lengkap: false });
+});
+uji('kategori hari tanpa hujan mengikuti batas BMKG', () => {
+  const nama = n => HTH_KAT[kategoriHTH(n)][1];
+  samaJSON([0, 1, 5, 6, 10, 11, 20, 21, 30, 31, 60, 61, 200].map(nama),
+    ['Masih ada hujan', 'Sangat pendek', 'Sangat pendek', 'Pendek', 'Pendek', 'Menengah', 'Menengah', 'Panjang', 'Panjang', 'Sangat panjang', 'Sangat panjang', 'Ekstrem panjang', 'Ekstrem panjang']);
+});
+uji('parsePOWER membuang nilai -999 dan mengurutkan tanggal', () => {
+  samaJSON(parsePOWER({ properties: { parameter: { PRECTOTCORR: { '20261003': 2.04, '20261001': 0, '20261002': 11.26, '20261004': -999 } } } }),
+    [{ t: '2026-10-01', ch: 0 }, { t: '2026-10-02', ch: 11.3 }, { t: '2026-10-03', ch: 2 }]);
+  assert.strictEqual(parsePOWER({ properties: { parameter: { PRECTOTCORR: { '20261004': -999 } } } }), null);
+  assert.strictEqual(parsePOWER({}), null);
+});
+uji('hujan n hari dibanding normal: persen dan sifat hujan dengan batas BMKG (85 % dan 115 %)', () => {
+  const hh = new Array(12).fill(10);
+  const uji1 = (mmHari, n) => hujanVsNormal(hariBerurut('2026-09-01', 40, (k, t) => ({ t, ch: mmHari })), hh, n);
+  const a = uji1(8.4, 30);
+  samaJSON([a.dari, a.sampai, a.total, a.normal, a.persen, SIFAT_HUJAN[a.sifat][1]], ['2026-09-11', '2026-10-10', 252, 300, 84, 'Bawah normal']);
+  samaJSON([uji1(8.5, 30).persen, SIFAT_HUJAN[uji1(8.5, 30).sifat][1]], [85, 'Normal']);
+  samaJSON([uji1(11.5, 30).persen, SIFAT_HUJAN[uji1(11.5, 30).sifat][1]], [115, 'Normal']);
+  samaJSON([uji1(11.6, 30).persen, SIFAT_HUJAN[uji1(11.6, 30).sifat][1]], [116, 'Atas normal']);
+  samaJSON(a.R[29], { t: '2026-10-10', ch: 8.4, kum: 252, kumN: 300 });
+  assert.strictEqual(uji1(5, 41), null);   // data kurang dari n hari
+  const beda = new Array(12).fill(0); beda[8] = 10; beda[9] = 20;           // September 10, Oktober 20 mm/hari
+  assert.strictEqual(hujanVsNormal(hariBerurut('2026-09-29', 4, (k, t) => ({ t, ch: 0 })), beda, 4).normal, 60);   // 29–30 Sep + 1–2 Okt
+});
+uji('nama hari singkat dari tanggal', () => {
+  samaJSON(['2026-10-18', '2026-10-19', '2026-10-24'].map(namaHari), ['Min', 'Sen', 'Sab']);
+});
+uji('grafik halaman Cuaca: panel terpisah (tanpa dua sumbu), jumlah tanda sesuai data, tooltip, tanpa NaN', () => {
+  const J = hariBerurut('2026-10-19', 3, (k, t) => t).flatMap(t => [1, 4, 7, 10, 13, 16, 19, 22].map(h => ({ t: t + 'T' + String(h).padStart(2, '0') + ':00', suhu: 24 + (h > 9 && h < 17 ? 7 : 0), hu: 85, ws: 6, wd: 250, cuaca: 'Hujan <b>Ringan</b>', tp: h === 16 ? 4.2 : 0 })));
+  const s1 = grafikBMKG('u1', J, { w: 340, now: '2026-10-19T00:30', label: 'uji "kutip"' });
+  assert.strictEqual((s1.match(/class="bh"/g) || []).length, 3);            // satu batang hujan per hari
+  assert.strictEqual((s1.match(/class="pa"/g) || []).length, 24);
+  assert.ok(s1.includes('aria-label="uji &quot;kutip&quot;"'));
+  assert.ok(GRAFIK.u1.tip(5).includes('Hujan &lt;b&gt;Ringan&lt;/b&gt;'));   // teks dari BMKG di-escape
+  const D = hariBerurut('2026-10-19', 14, (k, t) => ({ t, tx: 31 + k % 3, tn: 23 + k % 2, ch: k, pp: k * 7 }));
+  const s2 = grafik14('u2', D, { w: 340, hariIni: '2026-10-19', label: 'uji' });
+  assert.strictEqual((s2.match(/class="bs"/g) || []).length, 14);
+  assert.strictEqual((s2.match(/class="bh"/g) || []).length, 13);           // hari dengan peluang 0 % tidak bergambar
+  const R = hujanVsNormal(hariBerurut('2026-07-01', 90, (k, t) => ({ t, ch: k % 4 ? 0 : 12 })), IKLIM[0].hh, 90).R;
+  const s3 = grafik90('u3', R, { w: 340, label: 'uji' });
+  assert.ok(/class="lh"/.test(s3) && /class="lnorm"/.test(s3) && s3.includes('Tercatat ' + R[89].kum + ' mm'));
+  const s4 = grafikIklim('u4', IKLIM[0], bulanKering(IKLIM[0].hh), 9, { w: 340, label: 'uji' });
+  assert.strictEqual((s4.match(/class="bh"/g) || []).length, 12);
+  assert.strictEqual((s4.match(/class="wk"/g) || []).length, 4);
+  assert.ok(GRAFIK.u4.noLine && GRAFIK.u4.py(3) === null && GRAFIK.u4.tip(6).includes('relatif kering'));
+  [s1, s2, s3, s4].forEach(s => assert.ok(!/NaN|undefined|Infinity/.test(s)));
 });

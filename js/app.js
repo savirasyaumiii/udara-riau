@@ -45,6 +45,11 @@
   /* Hasil ukur stasiun (WAQI). U = {st, peta} atau null.
      umode: 'none' (token kosong, fitur disembunyikan) | 'loading' | 'live' | 'old' | 'off' | 'salah' (token ditolak) */
   let U = null, umode = adaTokenWAQI() ? 'loading' : 'none', uAt = 0, uBusy = false;
+  /* Halaman Cuaca. HR = hasil parseHarian per wilayah (Open-Meteo; dimuat saat halaman Cuaca
+     pertama dibuka). hmode: 'idle' | 'loading' | 'live' | 'old' | 'off'.
+     PW[i] = {D (hasil parsePOWER), at, lama} curah hujan harian NASA POWER wilayah i. */
+  let HR = [], hmode = 'idle', hAt = 0, hBusy = false;
+  const PW = {}, pBusy = {}, pGagal = {};
   /* anim = benar bila tampilan berikutnya perlu animasi masuk (ganti halaman atau data baru tiba) */
   let anim = true;
 
@@ -185,6 +190,47 @@
     render();
   }
 
+  /* Prakiraan dan riwayat harian Open-Meteo untuk 12 wilayah (halaman Cuaca) */
+  async function loadHarian(force) {
+    if (hBusy) return;
+    const c = bacaHarian(), umur = c ? Date.now() - c.t : Infinity;
+    if (c && !force && umur < HARIAN_SEGAR) { HR = c.D; hmode = 'live'; hAt = c.t; render(); return; }
+    hBusy = true;
+    if (!HR.some(Boolean)) { hmode = 'loading'; render(); }
+    let r = null;
+    try { r = await ambilHarian(WILAYAH); } catch (e) { r = null; }
+    hBusy = false;
+    if (r && r.some(Boolean)) { HR = r; hmode = 'live'; hAt = Date.now(); tulisHarian(r); }
+    else if (c && umur < HARIAN_LAMA) { HR = c.D; hmode = 'old'; hAt = c.t; }
+    else if (!HR.some(Boolean)) hmode = 'off';
+    render();
+  }
+
+  /* Curah hujan harian NASA POWER untuk wilayah i (halaman Cuaca) */
+  async function loadPOWER(i, force) {
+    if (pBusy[i]) return;
+    const c = bacaPOWER(i), umur = c ? Date.now() - c.t : Infinity;
+    if (c && !force && umur < POWER_SEGAR) { PW[i] = { D: c.D, at: c.t }; render(); return; }
+    pBusy[i] = true; pGagal[i] = 0;
+    if (!PW[i]) render();
+    let r = null;
+    try { r = await ambilPOWER(WILAYAH[i], Date.now()); } catch (e) { r = null; }
+    pBusy[i] = false;
+    if (r) { PW[i] = { D: r, at: Date.now() }; tulisPOWER(i, r); }
+    else if (c && umur < POWER_LAMA) PW[i] = { D: c.D, at: c.t, lama: true };
+    else if (!PW[i]) pGagal[i] = Date.now();
+    render();
+  }
+
+  /* Dipanggil setelah halaman Cuaca tampil: muat data yang belum ada. Percobaan yang gagal tidak
+     diulang di sini (agar tidak berulang tiap tampilan), melainkan lewat tombol Coba lagi atau
+     pembaruan otomatis. */
+  function pastikanCuaca() {
+    if (S.tab !== 'cuaca') return;
+    if (hmode === 'idle') loadHarian();
+    if (!PW[S.city] && !pBusy[S.city] && !pGagal[S.city]) loadPOWER(S.city);
+  }
+
   /* Titik panas yang masih dalam JAM_API jam terakhir (data cache bisa memuat yang sudah lewat) */
   function titik() {
     const now = wibStamp(Date.now());
@@ -231,7 +277,7 @@
 
     $('auto').textContent = mode === 'sim' ? 'Dijeda selama mode simulasi.'
       : navigator.onLine === false ? 'Menunggu sambungan internet. Data terakhir tetap ditampilkan.'
-      : 'Aktif selama halaman terbuka: data udara diperiksa ulang tiap 15 menit, cuaca BMKG dan titik panas tiap 1 jam.' +
+      : 'Aktif selama halaman terbuka: data udara diperiksa ulang tiap 15 menit, cuaca BMKG dan titik panas tiap 1 jam, prakiraan harian (halaman Cuaca) tiap 3 jam.' +
         (lastLoad && mode === 'live' ? ' Data udara terakhir diambil ' + jam(wibStamp(lastLoad)) + ' WIB.' : '');
 
     const b = $('bstat');
@@ -275,7 +321,8 @@
       ikonCuaca(y, 34) + '<b>' + y.suhu + '°</b><small>' + esc(y.cuaca) + '</small></li>').join('') + '</ol>';
     return '<section class="card bm">' + h2 + kini + al + fc +
       '<p class="note">Sumber: BMKG, prakiraan per 3 jam untuk ' + (b.desa ? 'Kel. ' + esc(b.desa) + ', ' : '') + (b.kec ? 'Kec. ' + esc(b.kec) : esc(WILAYAH[i].s)) + '. ' +
-      (bmode === 'old' ? 'Prakiraan tersimpan, diambil ' : 'Diambil ') + jam(wibStamp(bAt)) + ' WIB. BMKG tidak menerbitkan angka kualitas udara lewat layanan terbuka, jadi angka AQI tetap dari model Open-Meteo.</p></section>';
+      (bmode === 'old' ? 'Prakiraan tersimpan, diambil ' : 'Diambil ') + jam(wibStamp(bAt)) + ' WIB. BMKG tidak menerbitkan angka kualitas udara lewat layanan terbuka, jadi angka AQI tetap dari model Open-Meteo.</p>' +
+      '<button class="btn ghost" data-tab="cuaca">' + ikon('activity', 18) + ' Grafik cuaca dan iklim</button></section>';
   }
 
   /* Ringkasan angka: PM2.5 jam ini, tertinggi dan terendah 24 jam, tren 6 jam */
@@ -390,7 +437,109 @@
     return hero + '<div class="cols"><div class="stack">' + kel + adv + kartuBMKG(i) + '</div><div class="stack">' + kartuRingkas(d) + kartuUkur(i, d) + ch + '</div></div>';
   }
 
-  /* ---------- halaman 2: Se-Riau ---------- */
+  /* ---------- halaman 2: Cuaca (cuaca 3 hari, prakiraan 14 hari, kekeringan, iklim) ---------- */
+  const bulanIni = () => +hariIni().slice(5, 7) - 1;
+  const tabelData = (judul, kepala, baris) => '<details class="tbl"><summary>' + judul + '</summary><div class="tblw"><table><thead><tr>' +
+    kepala.map(k => '<th scope="col">' + k + '</th>').join('') + '</tr></thead><tbody>' + baris.map(r => '<tr>' + r.map(v => '<td>' + v + '</td>').join('') + '</tr>').join('') + '</tbody></table></div></details>';
+
+  /* Prakiraan resmi BMKG per 3 jam selama 3 hari (24 periode) */
+  function kartuCuaca3(i) {
+    const h2 = '<h2>' + ikon('cloud', 20) + ' Cuaca 3 hari dari BMKG</h2>', b = B[i], now = wibStamp(Date.now()), k = b ? periodeKini(b.J, now) : -1;
+    if (k < 0) {
+      if (bmode === 'loading') return '<section class="card">' + h2 + '<p class="lead">Memuat prakiraan cuaca resmi BMKG…</p><div class="sk3"></div></section>';
+      return '<section class="card">' + h2 + '<p class="lead">Prakiraan BMKG untuk ' + esc(WILAYAH[i].s) + ' belum bisa dimuat.</p><button class="btn ghost" data-a="bmkg">' + ikon('refresh', 18) + ' Coba lagi</button></section>';
+    }
+    const J = b.J.slice(k, k + 24), su = J.map(x => x.suhu), tot = Math.round(J.reduce((s, x) => s + (+x.tp || 0), 0) * 10) / 10;
+    const label = 'Prakiraan BMKG ' + J.length + ' periode tiga jam: suhu ' + Math.min(...su) + ' sampai ' + Math.max(...su) + ' derajat, jumlah hujan ' + tot + ' milimeter.';
+    return '<section class="card">' + h2 +
+      '<p class="lead">Suhu ' + Math.min(...su) + '–' + Math.max(...su) + '°C, jumlah hujan ' + tot + ' mm dalam ' + J.length * 3 + ' jam ke depan.</p>' +
+      grafikBMKG('c3', J, { w: lebar('half'), now, label }) +
+      '<p class="note">Geser jari atau kursor di atas grafik untuk melihat tiap periode. Panah angin menunjuk ke arah angin bertiup (ke mana asap terbawa).</p>' +
+      tabelData('Tabel prakiraan BMKG', ['Waktu', 'Cuaca', 'Suhu', 'Hujan', 'Lembap', 'Angin'], J.map(x => [dayLabel(x.t, now) + ' ' + jam(x.t), esc(x.cuaca), x.suhu + '°C', (+x.tp || 0) + ' mm',
+        x.hu != null ? x.hu + '%' : '–', x.ws != null ? x.ws + ' km/jam' + (x.wd != null ? ' dari ' + compass(x.wd) : '') : '–'])) +
+      '<p class="note">Sumber: BMKG, prakiraan resmi per 3 jam. ' + (bmode === 'old' ? 'Prakiraan tersimpan, diambil ' : 'Diambil ') + jam(wibStamp(bAt)) + ' WIB.' +
+      (mode === 'sim' ? ' Mode simulasi hanya mengubah angka kualitas udara; cuaca dan iklim di halaman ini tetap data nyata.' : '') + '</p></section>';
+  }
+
+  /* Prakiraan harian 14 hari (model Open-Meteo) */
+  function kartu14(i) {
+    const h2 = '<h2>' + ikon('calendar', 20) + ' Prakiraan 14 hari</h2>', H = HR[i], now = hariIni();
+    const D = H ? H.filter(x => x.t >= now).slice(0, 14) : [];
+    if (D.length < 2 || !D.some(x => x.tx != null)) {
+      if (hmode === 'idle' || hmode === 'loading') return '<section class="card">' + h2 + '<p class="lead">Memuat prakiraan harian…</p><div class="sk3"></div></section>';
+      return '<section class="card">' + h2 + '<p class="lead">Prakiraan harian belum bisa dimuat.</p><button class="btn ghost" data-a="harian">' + ikon('refresh', 18) + ' Coba lagi</button></section>';
+    }
+    const basah = D.filter(x => x.pp != null && x.pp >= 60).length;
+    const label = 'Prakiraan ' + D.length + ' hari: ' + basah + ' hari dengan peluang hujan 60 persen atau lebih.';
+    return '<section class="card">' + h2 +
+      '<p class="lead"><b>' + basah + ' dari ' + D.length + ' hari</b> berpeluang hujan 60% atau lebih.</p>' +
+      grafik14('c14', D, { w: lebar('half'), hariIni: now, label }) +
+      tabelData('Tabel prakiraan harian', ['Tanggal', 'Suhu', 'Peluang hujan', 'Hujan'], D.map(x => [namaHari(x.t) + ', ' + tglPendek(x.t),
+        x.tn != null && x.tx != null ? Math.round(x.tn) + '–' + Math.round(x.tx) + '°C' : '–', x.pp != null ? x.pp + '%' : '–', x.ch != null ? x.ch + ' mm' : '–'])) +
+      '<p class="note">Sumber: Open-Meteo (model cuaca global, bukan BMKG). Makin jauh harinya, makin kurang pasti; untuk 3 hari ke depan utamakan prakiraan BMKG. ' +
+      (hmode === 'old' ? 'Data tersimpan, diambil ' : 'Diambil ') + jam(wibStamp(hAt)) + ' WIB.</p></section>';
+  }
+
+  /* Kekeringan: hari tanpa hujan (Open-Meteo), hujan 90 hari dibanding normal (NASA POWER) */
+  function kartuKering(i) {
+    const w = WILAYAH[i], hh = IKLIM[i].hh, mm = normalBulanan(hh), kr = bulanKering(hh), b = bulanIni(), now = hariIni();
+    const hth = HR[i] ? hariTanpaHujan(HR[i], now) : null, pw = PW[i], hv = pw ? hujanVsNormal(pw.D, hh, 90) : null;
+    const tile = (lbl, val, sub, c) => '<div class="tile" style="--tc:' + c + '"><small>' + lbl + '</small><b>' + val + '</b><span>' + sub + '</span></div>';
+    const memuat = hmode === 'idle' || hmode === 'loading';
+    const t1 = hth
+      ? tile('Hari tanpa hujan', (hth.lengkap ? '' : '≥ ') + hth.n + '<small> hari</small>', HTH_KAT[kategoriHTH(hth.n)][1] + (hth.akhir ? '; hujan terakhir ' + tglPendek(hth.akhir.t) + ' (' + hth.akhir.ch + ' mm)' : ''), 'var(--smoke)')
+      : tile('Hari tanpa hujan', '–', memuat ? 'memuat…' : 'data belum bisa dimuat', 'var(--smoke)');
+    const t2 = hv
+      ? tile('Hujan 90 hari', hv.persen + '<small>% dari normal</small>', 'Sifat hujan ' + SIFAT_HUJAN[hv.sifat][1].toLowerCase() + ' (' + hv.total + ' dari ' + hv.normal + ' mm)', 'var(--hujan)')
+      : tile('Hujan 90 hari', '–', pBusy[i] || !pGagal[i] ? 'memuat…' : 'data belum bisa dimuat', 'var(--hujan)');
+    const t3 = tile('Normal ' + NAMA_BULAN[b], mm[b] + '<small> mm</small>', kr[b] ? 'bulan relatif kering' : 'bulan relatif basah', 'var(--mute)');
+
+    const alasan = [];
+    if (hth && hth.n >= 11) alasan.push(hth.n + ' hari tanpa hujan');
+    if (hv && hv.sifat === 0) alasan.push('hujan 90 hari di bawah normal (' + hv.persen + '%)');
+    if (kr[b]) alasan.push(NAMA_BULAN[b] + ' termasuk bulan relatif kering');
+    const al = !hth && !hv ? ''
+      : alasan.length
+        ? '<div class="vdc wait"><span class="vi">' + ikon('alert', 22) + '</span><div><b>Waspada lahan mengering</b><br>' + alasan.join('; ') + '. Lahan, terutama gambut, lebih mudah terbakar saat kering, sehingga risiko kabut asap meningkat.</div></div>'
+        : '<div class="vdc ok"><span class="vi">' + ikon('drop', 22) + '</span><div><b>Hujan masih cukup</b><br>Belum ada tanda kekeringan dari data hujan terakhir.</div></div>';
+
+    let gr;
+    if (hv) gr = grafik90('c90', hv.R, { w: lebar('half'), label: 'Jumlah hujan 90 hari sampai ' + tglPendek(hv.sampai) + ': ' + hv.total + ' milimeter, normalnya ' + hv.normal + ' milimeter (' + hv.persen + ' persen).' }) +
+      '<ul class="lg key"><li><i class="kl"></i>Hujan tercatat (dijumlahkan)</li><li><i class="kl kn"></i>Normal 1991–2020</li></ul>' +
+      tabelData('Tabel hujan harian 90 hari', ['Tanggal', 'Hujan', 'Jumlah', 'Normal'], hv.R.slice().reverse().map(x => [tglPendek(x.t), x.ch + ' mm', x.kum + ' mm', x.kumN + ' mm']));
+    else if (pGagal[i] && !pBusy[i]) gr = '<p class="lead">Data hujan 90 hari belum bisa dimuat.</p><button class="btn ghost" data-a="power">' + ikon('refresh', 18) + ' Coba lagi</button>';
+    else gr = '<div class="sk3"></div>';
+
+    return '<section class="card">' + '<h2>' + ikon('drop', 20) + ' Hujan dan kekeringan</h2><div class="tiles">' + t1 + t2 + t3 + '</div>' + al +
+      (alasan.length ? '<button class="btn ghost" data-tab="riau">' + ikon('fire', 18) + ' Lihat titik panas</button>' : '') +
+      '<h3 class="sub">Jumlah hujan 90 hari dibanding normal</h3>' + gr +
+      '<p class="note">Hari tanpa hujan: perkiraan model Open-Meteo sampai kemarin; hari disebut hujan bila minimal 1 mm; kategori menurut BMKG (1–5 hari sangat pendek, 6–10 pendek, 11–20 menengah, 21–30 panjang, 31–60 sangat panjang, lebih dari 60 ekstrem panjang). ' +
+      'Hujan 90 hari: NASA POWER, tertinggal 3–5 hari' + (hv ? ' (sampai ' + tglPendek(hv.sampai) + ')' : '') + ', dibanding normal 1991–2020 dari sumber yang sama; sifat hujan memakai batas BMKG (bawah normal &lt; 85%, normal 85–115%, atas normal &gt; 115%). ' +
+      'Peta hari tanpa hujan resmi diterbitkan BMKG tiap dasarian.</p></section>';
+  }
+
+  /* Normal iklim bulanan 1991–2020 (NASA POWER, data tetap di js/iklim.js) */
+  function kartuIklim(i) {
+    const w = WILAYAH[i], I = IKLIM[i], mm = normalBulanan(I.hh), kr = bulanKering(I.hh), b = bulanIni();
+    const kering = NAMA_BULAN.filter((_, m) => kr[m]), setahun = mm.reduce((s, v) => s + v, 0);
+    const label = 'Curah hujan normal bulanan ' + w.s + ', 1991 sampai 2020: tertinggi ' + NAMA_BULAN[mm.indexOf(Math.max(...mm))] + ' ' + Math.max(...mm) + ' milimeter, terendah ' + NAMA_BULAN[mm.indexOf(Math.min(...mm))] + ' ' + Math.min(...mm) + ' milimeter.';
+    return '<section class="card"><h2>' + ikon('calendar', 20) + ' Iklim bulanan (1991–2020)</h2>' +
+      '<p class="lead">Rata-rata 30 tahun untuk titik data ' + esc(w.s) + ': hujan sekitar <b>' + setahun + ' mm setahun</b>, suhu rata-rata ' + Math.min(...I.t) + '–' + Math.max(...I.t) + '°C sepanjang tahun.</p>' +
+      grafikIklim('ci', I, kr, b, { w: lebar('half'), label }) +
+      '<ul class="lg key"><li><i class="kbh"></i>Curah hujan normal (mm/bulan)</li><li><i class="kwk"></i>Bulan relatif kering</li><li><i class="kbi"></i>Bulan ini</li></ul>' +
+      (kering.length ? '<p><b>Bulan relatif kering: ' + kering.join(', ') + '.</b> Pada bulan-bulan ini lahan lebih mudah terbakar, jadi kewaspadaan terhadap kabut asap perlu ditingkatkan.</p>' : '') +
+      tabelData('Tabel iklim bulanan', ['Bulan', 'Hujan', 'Suhu rata-rata', 'Maks', 'Min', 'Keterangan'], mm.map((v, m) => [NAMA_BULAN[m], v + ' mm', I.t[m] + '°C', I.tx[m] + '°C', I.tn[m] + '°C',
+        [kr[m] ? 'relatif kering' : '', m === b ? 'bulan ini' : ''].filter(Boolean).join(', ') || '–'])) +
+      '<p class="note">Sumber: NASA POWER (reanalisis MERRA-2, resolusi sekitar 50 km), periode normal 1991–2020 seperti yang dipakai BMKG. Nilai model, bukan pengamatan stasiun; titik data yang berdekatan dapat bernilai sama. ' +
+      'Bulan relatif kering: normal di bawah 85% rata-rata bulanan wilayah itu (patokan rancangan, bukan penetapan musim oleh BMKG). Riau berpola hujan dua puncak, sehingga banyak wilayahnya tidak punya musim kemarau yang tegas.</p></section>';
+  }
+
+  function viewCuaca() {
+    const i = S.city;
+    return '<div class="cols"><div class="stack">' + kartuCuaca3(i) + kartu14(i) + '</div><div class="stack">' + kartuKering(i) + kartuIklim(i) + '</div></div>';
+  }
+
+  /* ---------- halaman 3: Se-Riau ---------- */
   function kartuKiriman(i) {
     const d = D[i];
     let body;
@@ -477,7 +626,7 @@
     return '<div class="cols riau">' + peta1 + rank + det + (d ? kartuKiriman(i) : '') + kartuApi(i) + '</div>';
   }
 
-  /* ---------- halaman 3: Rencana ---------- */
+  /* ---------- halaman 4: Rencana ---------- */
   function viewRencana() {
     const i = S.city, d = D[i], kg = KEGIATAN[S.act];
     const pick = '<section class="card"><h2>Pilih kegiatan</h2><p class="lead">Wilayah: <b>' + esc(WILAYAH[i].s) + '</b>. Ganti lewat pilihan wilayah di atas.</p>' +
@@ -521,7 +670,7 @@
     return '<div class="cols asym">' + pick + '<div class="stack">' + aman + gw + jb + '</div></div>';
   }
 
-  /* ---------- halaman 4: Catatan ---------- */
+  /* ---------- halaman 5: Catatan ---------- */
   function viewCatatan() {
     if (dsel === null) { const x = C.diary.find(e => e.d === hariIni()); dsel = x ? x.sy.slice() : []; }
     const ins = pola(C.diary), done = KESIAPAN.filter(k => C.chk[k.kode]).length;
@@ -572,8 +721,9 @@
     document.documentElement.style.setProperty('--cat', dd ? kat(dd.aqi).c1 : '#5E7180');
     const v = $('view');
     v.classList.toggle('anim', anim); anim = false;
-    v.innerHTML = S.tab === 'hari' ? viewHari() : S.tab === 'riau' ? viewRiau() : S.tab === 'rencana' ? viewRencana() : viewCatatan();
+    v.innerHTML = S.tab === 'hari' ? viewHari() : S.tab === 'cuaca' ? viewCuaca() : S.tab === 'riau' ? viewRiau() : S.tab === 'rencana' ? viewRencana() : viewCatatan();
     if (sel) { const n = document.querySelector(sel); if (n && n !== document.activeElement) n.focus({ preventScroll: true }); }
+    if (S.tab === 'cuaca') setTimeout(pastikanCuaca, 0);
   }
 
   /* ---------- interaksi ---------- */
@@ -604,10 +754,12 @@
       } catch (e) { toast('Perangkat ini tidak mendukung suara.'); }
       return;
     }
-    if (d.a === 'refresh') { loadAll(true); loadBMKG(true); loadApi(true); loadUkur(true); return; }
+    if (d.a === 'refresh') { loadAll(true); loadBMKG(true); loadApi(true); loadUkur(true); if (hmode !== 'idle') loadHarian(true); return; }
     if (d.a === 'bmkg') { loadBMKG(true); return; }
     if (d.a === 'api') { loadApi(true); return; }
     if (d.a === 'ukur') { loadUkur(true); return; }
+    if (d.a === 'harian') { loadHarian(true); return; }
+    if (d.a === 'power') { pGagal[S.city] = 0; loadPOWER(S.city, true); return; }
     if (d.a === 'simoff') { loadAll(); return; }
     if (d.c !== undefined) {
       S.city = +d.c; $('city').value = S.city; simpanPeng();
@@ -626,7 +778,9 @@
     }
   }
 
-  /* Tooltip grafik: cari jam terdekat dari posisi pointer. Geometri dari GRAFIK[id] (svg.js). */
+  /* Tooltip grafik: cari titik terdekat dari posisi pointer. Geometri dari GRAFIK[id] (svg.js).
+     Grafik halaman Cuaca membawa fungsinya sendiri: idx (indeks dari posisi x), px/py (posisi
+     penanda; py null = tanpa titik), tip (isi tooltip), dan noLine (tanpa garis silang). */
   function tampilkanTip(e) {
     const w = e.target.closest ? e.target.closest('.chartw') : null;
     document.querySelectorAll('.chartw.on').forEach(x => { if (x !== w) { x.classList.remove('on'); x.querySelector('.tip').hidden = true; x.querySelector('.xh').style.display = 'none'; x.querySelector('.xd').style.display = 'none'; } });
@@ -634,14 +788,17 @@
     const m = GRAFIK[w.dataset.ch];
     if (!m) return;
     const svg = w.querySelector('svg'), r = svg.getBoundingClientRect(), sx = m.W / r.width;
-    const i = Math.max(0, Math.min(m.n - 1, Math.round(((e.clientX - r.left) * sx - m.l) / (m.pw / (m.n - 1)))));
-    const px = m.l + i * m.pw / (m.n - 1), py = m.t + m.ph - Math.min(m.H[i].a, m.ymax) / m.ymax * m.ph;
+    const x0 = (e.clientX - r.left) * sx;
+    const i = m.idx ? m.idx(x0) : Math.max(0, Math.min(m.n - 1, Math.round((x0 - m.l) / (m.pw / (m.n - 1)))));
+    const px = m.px ? m.px(i) : m.l + i * m.pw / (m.n - 1);
+    const py = m.py ? m.py(i) : m.t + m.ph - Math.min(m.H[i].a, m.ymax) / m.ymax * m.ph;
     const xh = w.querySelector('.xh'), xd = w.querySelector('.xd'), tip = w.querySelector('.tip');
-    xh.setAttribute('x1', px); xh.setAttribute('x2', px); xh.style.display = '';
-    xd.setAttribute('cx', px); xd.setAttribute('cy', py); xd.style.display = '';
+    xh.setAttribute('x1', px); xh.setAttribute('x2', px); xh.style.display = m.noLine ? 'none' : '';
+    if (py == null) xd.style.display = 'none';
+    else { xd.setAttribute('cx', px); xd.setAttribute('cy', py); xd.style.display = ''; }
     w.classList.add('on');
     tip.hidden = false;
-    tip.innerHTML = '<b>' + fmtT(m.H, i) + '</b><br>AQI ' + m.H[i].a + ', ' + kat(m.H[i].a).s;
+    tip.innerHTML = m.tip ? m.tip(i) : '<b>' + fmtT(m.H, i) + '</b><br>AQI ' + m.H[i].a + ', ' + kat(m.H[i].a).s;
     tip.style.left = Math.max(0, Math.min(r.width - tip.offsetWidth, px / sx - tip.offsetWidth / 2)) + 'px';
   }
 
@@ -653,7 +810,7 @@
   $('city').onchange = e => { S.city = +e.target.value; simpanPeng(); render(); };
   document.addEventListener('pointermove', tampilkanTip);
   document.addEventListener('pointerdown', tampilkanTip);
-  $('rf').onclick = () => { if (mode === 'sim') { toast('Keluar dari simulasi dulu untuk memuat data nyata.'); return; } loadAll(true); loadBMKG(true); loadApi(true); loadUkur(true); };
+  $('rf').onclick = () => { if (mode === 'sim') { toast('Keluar dari simulasi dulu untuk memuat data nyata.'); return; } loadAll(true); loadBMKG(true); loadApi(true); loadUkur(true); if (hmode !== 'idle') loadHarian(true); };
   document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('g[data-c]')) { e.preventDefault(); onAct(e.target); } });
   document.addEventListener('change', e => {
     const t = e.target, d = t.dataset;
@@ -705,6 +862,10 @@
     if (tempo('bmkg', bAt, BMKG_SEGAR)) { coba.bmkg = Date.now(); loadBMKG(); }
     if (tempo('api', aAt, API_SEGAR)) { coba.api = Date.now(); loadApi(); }
     if (umode !== 'none' && umode !== 'salah' && tempo('ukur', uAt, WAQI_SEGAR)) { coba.ukur = Date.now(); loadUkur(); }
+    /* halaman Cuaca: hanya setelah pernah dibuka */
+    if (hmode !== 'idle' && tempo('harian', hAt, HARIAN_SEGAR)) { coba.harian = Date.now(); loadHarian(); }
+    const c = S.city, kp = 'power' + c;
+    if (S.tab === 'cuaca' && (PW[c] ? tempo(kp, PW[c].at, POWER_SEGAR) : pGagal[c] && tempo(kp, 0, ULANG))) { coba[kp] = Date.now(); pGagal[c] = 0; loadPOWER(c); }
   }
   setInterval(segarkan, 60 * 1000);
   document.addEventListener('visibilitychange', segarkan);
