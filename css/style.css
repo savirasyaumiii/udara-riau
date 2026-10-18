@@ -403,6 +403,38 @@ a { color: inherit; }
 .lg.key i.kwk { background: var(--smoke); opacity: .35; box-shadow: none; }
 .lg.key i.kbi { width: 8px; height: 8px; border-radius: 50%; background: var(--ink); box-shadow: none; }
 
+/* galeri peta BMKG (halaman Cuaca): kartu bergeser ke samping, satu terlihat penuh di ponsel, tiga di layar lebar.
+   Latar gambar selalu putih karena peta BMKG berlatar putih. */
+.gal { margin-bottom: 16px; }
+.gal-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.gal-h h2 { margin: 0; }
+.gal-nav { display: flex; gap: 8px; flex-shrink: 0; }
+.galeri { list-style: none; margin: 12px 0 0; padding: 2px 2px 10px; display: grid; grid-auto-flow: column; grid-auto-columns: 84%; gap: 14px;
+  overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.galeri:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 12px; }
+.gk { scroll-snap-align: start; min-width: 0; }
+.gk figure { margin: 0; }
+.gk-img { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 4 / 3; padding: 0; border: 1px solid var(--ln);
+  border-radius: 14px; background: #FFFFFF; color: #13232E; overflow: hidden; cursor: zoom-in; font: inherit; }
+.gk-img img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.gk-zoom { position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(19, 35, 46, .72); color: #FFFFFF; }
+.gk-img.gk-muat { cursor: pointer; background: var(--sk); color: var(--ink); }
+.gk-muat span { display: grid; justify-items: center; gap: 6px; padding: 14px; text-align: center; }
+.gk-muat .i { color: var(--acc); }
+.gk-muat small { color: var(--mute); font-size: .82rem; }
+.gk-img.gagal img { display: none; }
+.gk-img.gagal::before { content: 'Gambar BMKG belum bisa dimuat. Coba lagi nanti atau buka situs BMKG.'; padding: 16px; color: #4A5D69; font-size: .9rem; text-align: center; }
+.gk figcaption b { display: block; margin-top: 10px; font-size: 1rem; }
+.gk figcaption span { display: block; margin-top: 2px; color: var(--mute); font-size: .88rem; line-height: 1.4; }
+.lb { width: min(1100px, calc(100vw - 24px)); max-width: none; max-height: calc(100vh - 24px); padding: 14px; border: 0; border-radius: 18px; background: var(--sf); color: var(--ink); box-shadow: var(--sh); }
+.lb::backdrop { background: rgba(10, 17, 23, .72); }
+.lb-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.lb-h h2 { margin: 0; font-size: 1.1rem; }
+.lb-w { overflow: auto; max-height: calc(100vh - 190px); border-radius: 12px; background: #FFFFFF; }
+.lb-w img { display: block; width: 100%; height: auto; cursor: zoom-in; }
+.lb-w img.z { width: 220%; max-width: none; cursor: zoom-out; }
+.lb .note { margin-top: 10px; }
+
 /* ---------- 14. layar lebar ---------- */
 @media (min-width: 860px) {
   .wrap { padding-block: 16px 56px; }
@@ -417,6 +449,7 @@ a { color: inherit; }
   .cols.riau > .a-peta { grid-area: peta; } .cols.riau > .a-rank { grid-area: rank; }
   .cols.riau > .a-det { grid-area: det; } .cols.riau > .a-asap { grid-area: asap; }
   .cols.riau > .a-api { grid-area: api; }
+  .galeri { grid-auto-columns: calc((100% - 28px) / 3); }
   .sky-txt { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 40px; padding: 30px 34px 22px; }
   .sky-txt > .where, .verdict, .trend, .wx { grid-column: 1; }
   .sky-txt > .where { justify-self: start; }

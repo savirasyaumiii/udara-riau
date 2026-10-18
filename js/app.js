@@ -50,6 +50,13 @@
      PW[i] = {D (hasil parsePOWER), at, lama} curah hujan harian NASA POWER wilayah i. */
   let HR = [], hmode = 'idle', hAt = 0, hBusy = false;
   const PW = {}, pBusy = {}, pGagal = {};
+  /* Galeri peta BMKG: satMuat = benar setelah pengguna mengetuk "Muat animasi satelit";
+     petaDimuat = indeks peta yang sudah pernah terlihat (langsung dimuat lagi saat halaman digambar ulang) */
+  let satMuat = false;
+  const petaDimuat = new Set();
+  /* petaGagal[k] = alamat peta k yang gagal dimuat; tidak dicoba lagi sampai alamatnya berganti (tiap jam),
+     agar halaman yang digambar ulang tidak terus meminta gambar yang sedang tidak tersedia */
+  const petaGagal = {};
   /* anim = benar bila tampilan berikutnya perlu animasi masuk (ganti halaman atau data baru tiba) */
   let anim = true;
 
@@ -442,6 +449,49 @@
   const tabelData = (judul, kepala, baris) => '<details class="tbl"><summary>' + judul + '</summary><div class="tblw"><table><thead><tr>' +
     kepala.map(k => '<th scope="col">' + k + '</th>').join('') + '</tr></thead><tbody>' + baris.map(r => '<tr>' + r.map(v => '<td>' + v + '</td>').join('') + '</tr>').join('') + '</tbody></table></div></details>';
 
+  /* Galeri peta resmi BMKG, seperti bagian "Visualisasi Cuaca dan Iklim" di bmkg.go.id.
+     Parameter v berganti tiap jam agar gambar yang diperbarui BMKG tidak tertahan cache peramban. */
+  const urlPeta = p => p.src + '?v=' + wibHour(Date.now()).replace(/\D/g, '').slice(0, 10);
+  const ukuranPeta = p => p.kb >= 1000 ? String(Math.round(p.kb / 100) / 10).replace('.', ',') + ' MB' : p.kb + ' KB';
+  function kartuGaleri() {
+    const isi = PETA_BMKG.map((p, k) => {
+      const gb = petaGagal[k] === urlPeta(p)
+        ? '<button class="gk-img gagal" data-peta="' + k + '" aria-label="Peta ' + esc(p.judul) + ' belum bisa dimuat"></button>'
+        : p.ketuk && !satMuat
+        ? '<button class="gk-img gk-muat" data-a="satelit"><span>' + ikon('cloud', 30) + '<b>Muat animasi ' + esc(p.judul.toLowerCase()) + '</b><small>± ' + ukuranPeta(p) + '; tidak dimuat otomatis agar hemat data</small></span></button>'
+        : '<button class="gk-img" data-peta="' + k + '" aria-label="Perbesar peta ' + esc(p.judul) + '"><img class="pbmkg" ' + (p.ketuk || petaDimuat.has(k) ? 'src' : 'data-src') + '="' + urlPeta(p) + '" alt="Peta BMKG: ' + esc(p.judul) + '" decoding="async">' +
+          '<span class="gk-zoom" aria-hidden="true">' + ikon('zoom', 18) + '</span></button>';
+      return '<li class="gk"><figure>' + gb + '<figcaption><b>' + esc(p.judul) + '</b><span>' + esc(p.ket) + '</span></figcaption></figure></li>';
+    }).join('');
+    return '<section class="card gal" aria-labelledby="h-gal"><div class="gal-h"><h2 id="h-gal">' + ikon('map', 20) + ' Visualisasi cuaca dan iklim dari BMKG</h2>' +
+      '<div class="gal-nav"><button class="ib" data-a="gal-" aria-label="Peta sebelumnya">' + ikon('left', 20) + '</button><button class="ib" data-a="gal+" aria-label="Peta berikutnya">' + ikon('right', 20) + '</button></div></div>' +
+      '<p class="lead">Peta resmi BMKG untuk seluruh Indonesia. Riau berada di bagian tengah Pulau Sumatra, di sekitar garis khatulistiwa (0–2° LU, 100–104° BT). Ketuk peta untuk memperbesar.</p>' +
+      '<ul class="galeri" tabindex="0" aria-label="Galeri peta BMKG; geser ke samping untuk peta lainnya">' + isi + '</ul>' +
+      '<p class="note">Sumber: BMKG. Gambar dimuat langsung dari server BMKG (dataweb.bmkg.go.id) dan diperbarui oleh BMKG, jadi isinya di luar kendali web ini. Peta dimuat saat terlihat; citra satelit hanya setelah diketuk.</p></section>';
+  }
+
+  /* Peta baru dimuat saat kartunya hampir terlihat di dalam galeri. loading="lazy" bawaan peramban
+     tidak dipakai karena pada galeri yang digeser ke samping peramban memuat semua peta sekaligus
+     (sekitar 2,6 MB). Dipanggil setiap kali halaman Cuaca digambar. */
+  function amatiGaleri() {
+    const g = document.querySelector('.galeri'), belum = g ? [...g.querySelectorAll('img[data-src]')] : [];
+    const muat = i => { i.src = i.dataset.src; i.removeAttribute('data-src'); petaDimuat.add(+i.parentNode.dataset.peta); };
+    if (!belum.length) return;
+    if (!('IntersectionObserver' in window)) { belum.forEach(muat); return; }
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { muat(e.target); io.unobserve(e.target); } }), { root: g, rootMargin: '0px 30% 0px 30%' });
+    belum.forEach(i => io.observe(i));
+  }
+
+  /* Peta diperbesar di jendela dialog (#lb di index.html) */
+  function bukaPeta(k) {
+    const p = PETA_BMKG[k], d = $('lb'), img = $('lb-img');
+    $('lb-j').textContent = p.judul;
+    img.classList.remove('z'); img.alt = 'Peta BMKG: ' + p.judul; img.src = urlPeta(p);
+    $('lb-k').innerHTML = esc(p.ket) + '. Sumber: BMKG. Ketuk peta untuk memperbesar atau memperkecil. <a href="' + p.src + '" target="_blank" rel="noopener">Buka gambar asli di BMKG</a>';
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+  }
+  function tutupPeta() { const d = $('lb'); if (d.close) d.close(); else d.removeAttribute('open'); }
+
   /* Prakiraan resmi BMKG per 3 jam selama 3 hari (24 periode) */
   function kartuCuaca3(i) {
     const h2 = '<h2>' + ikon('cloud', 20) + ' Cuaca 3 hari dari BMKG</h2>', b = B[i], now = wibStamp(Date.now()), k = b ? periodeKini(b.J, now) : -1;
@@ -536,7 +586,7 @@
 
   function viewCuaca() {
     const i = S.city;
-    return '<div class="cols"><div class="stack">' + kartuCuaca3(i) + kartu14(i) + '</div><div class="stack">' + kartuKering(i) + kartuIklim(i) + '</div></div>';
+    return kartuGaleri() + '<div class="cols"><div class="stack">' + kartuCuaca3(i) + kartu14(i) + '</div><div class="stack">' + kartuKering(i) + kartuIklim(i) + '</div></div>';
   }
 
   /* ---------- halaman 3: Se-Riau ---------- */
@@ -702,7 +752,7 @@
   /* ---------- render ---------- */
   function focusSel(el) {
     if (!el || !el.getAttribute) return null;
-    for (const a of ['data-tab', 'data-c', 'data-act', 'data-p', 'data-sy', 'data-a', 'data-ck']) {
+    for (const a of ['data-tab', 'data-c', 'data-act', 'data-p', 'data-sy', 'data-a', 'data-ck', 'data-peta']) {
       if (el.hasAttribute(a)) return el.tagName.toLowerCase() + '[' + a + '="' + el.getAttribute(a) + '"]';
     }
     return null;
@@ -721,7 +771,11 @@
     document.documentElement.style.setProperty('--cat', dd ? kat(dd.aqi).c1 : '#5E7180');
     const v = $('view');
     v.classList.toggle('anim', anim); anim = false;
+    /* posisi geser galeri peta dipertahankan saat halaman digambar ulang (mis. data baru tiba) */
+    const gal = document.querySelector('.galeri'), galX = gal ? gal.scrollLeft : 0;
     v.innerHTML = S.tab === 'hari' ? viewHari() : S.tab === 'cuaca' ? viewCuaca() : S.tab === 'riau' ? viewRiau() : S.tab === 'rencana' ? viewRencana() : viewCatatan();
+    if (galX) { const g = document.querySelector('.galeri'); if (g) g.scrollLeft = galX; }
+    if (S.tab === 'cuaca') amatiGaleri();
     if (sel) { const n = document.querySelector(sel); if (n && n !== document.activeElement) n.focus({ preventScroll: true }); }
     if (S.tab === 'cuaca') setTimeout(pastikanCuaca, 0);
   }
@@ -745,6 +799,20 @@
   function onAct(el) {
     const d = el.dataset;
     if (d.tab) { go(d.tab); return; }
+    if (d.peta !== undefined) { bukaPeta(+d.peta); return; }
+    if (d.a === 'lbtutup') { tutupPeta(); return; }
+    if (d.a === 'satelit') {
+      satMuat = true; render();
+      const b = document.querySelector('[data-peta="' + PETA_BMKG.findIndex(p => p.ketuk) + '"]');
+      if (b) b.focus({ preventScroll: true });
+      return;
+    }
+    if (d.a === 'gal-' || d.a === 'gal+') {
+      const g = document.querySelector('.galeri'), li = g && g.querySelector('.gk');
+      if (g) g.scrollBy({ left: (d.a === 'gal+' ? 1 : -1) * (li ? li.getBoundingClientRect().width + 14 : g.clientWidth),
+        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      return;
+    }
     if (d.p) { S.pf = d.p; simpanPeng(); render(); return; }
     if (d.a === 'simon') { simOn(); return; }
     if (d.a === 'spk') {
@@ -806,7 +874,17 @@
   $('city').innerHTML = WILAYAH.map((c, i) => '<option value="' + i + '">' + esc(c.n) + (c.ik ? ' (' + esc(c.ik) + ')' : '') + '</option>').join('');
   $('city').value = S.city;
 
-  document.addEventListener('click', e => { const el = e.target.closest('[data-tab],[data-c],[data-act],[data-p],[data-a]'); if (el) onAct(el); });
+  document.addEventListener('click', e => { const el = e.target.closest('[data-tab],[data-c],[data-act],[data-p],[data-a],[data-peta]'); if (el) onAct(el); });
+
+  /* Galeri peta BMKG: gambar yang gagal dimuat diganti keterangan; dialog peta ditutup bila latar
+     di luar kotaknya diketuk; mengetuk peta di dialog memperbesar atau memperkecil */
+  document.addEventListener('error', e => {
+    const t = e.target;
+    if (t && t.classList && t.classList.contains('pbmkg') && t.parentNode) { t.parentNode.classList.add('gagal'); petaGagal[+t.parentNode.dataset.peta] = t.getAttribute('src'); }
+    if (t && t.id === 'lb-img') $('lb-k').textContent = 'Gambar BMKG belum bisa dimuat. Coba lagi nanti atau buka situs BMKG.';
+  }, true);
+  $('lb').addEventListener('click', e => { if (e.target === $('lb')) tutupPeta(); });
+  $('lb-img').addEventListener('click', e => e.target.classList.toggle('z'));
   $('city').onchange = e => { S.city = +e.target.value; simpanPeng(); render(); };
   document.addEventListener('pointermove', tampilkanTip);
   document.addEventListener('pointerdown', tampilkanTip);

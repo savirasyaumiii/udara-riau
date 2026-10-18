@@ -696,6 +696,17 @@ uji('hujan n hari dibanding normal: persen dan sifat hujan dengan batas BMKG (85
   const beda = new Array(12).fill(0); beda[8] = 10; beda[9] = 20;           // September 10, Oktober 20 mm/hari
   assert.strictEqual(hujanVsNormal(hariBerurut('2026-09-29', 4, (k, t) => ({ t, ch: 0 })), beda, 4).normal, 60);   // 29–30 Sep + 1–2 Okt
 });
+uji('galeri peta BMKG: 6 peta dari dataweb.bmkg.go.id, alamat unik, hanya citra satelit yang menunggu diketuk', () => {
+  const PETA = vm.runInContext('PETA_BMKG', ctx);
+  assert.strictEqual(PETA.length, 6);
+  PETA.forEach(p => {
+    assert.ok(/^https:\/\/dataweb\.bmkg\.go\.id\/[\w/.-]+\.(png|jpg|gif)$/.test(p.src), p.src);
+    assert.ok(p.judul && p.ket && p.kb > 0, p.judul);
+  });
+  assert.strictEqual(new Set(PETA.map(p => p.src)).size, 6);
+  samaJSON(PETA.filter(p => p.ketuk).map(p => p.judul), ['Citra satelit']);
+  assert.ok(PETA.filter(p => p.ketuk).every(p => p.kb >= 1000));
+});
 uji('nama hari singkat dari tanggal', () => {
   samaJSON(['2026-10-18', '2026-10-19', '2026-10-24'].map(namaHari), ['Min', 'Sen', 'Sab']);
 });

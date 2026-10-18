@@ -109,6 +109,7 @@
           <li>Resolusi model sekitar 45 km, jadi wilayah yang berdekatan dapat menunjukkan angka mirip. Angka AQI utama adalah perkiraan model, bukan pengukuran langsung, bukan angka ISPU resmi, dan dapat berbeda dari aplikasi lain.</li>
           <li>Hasil ukur stasiun (bila diaktifkan pemilik web) berasal dari alat ukur PM2.5 BMKG Pekanbaru dan stasiun lain di sekitar Riau yang diteruskan <a href="https://waqi.info/" target="_blank" rel="noopener">World Air Quality Index Project</a>. Satu stasiun hanya menggambarkan keadaan di titik itu. Nilai ISPU dihitung dari PM2.5 jam ini menurut Permen LHK No. 14 Tahun 2020 sebagai perkiraan, bukan ISPU resmi.</li>
           <li>Titik panas berasal dari satelit VIIRS (NOAA-20, NOAA-21, Suomi NPP) yang disajikan <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS</a> lewat NASA GIBS, untuk 48 jam terakhir. Satelit hanya mendeteksi saat melintas, titik panas belum tentu kebakaran lahan, dan api dapat tertutup awan atau asap. Informasi resmi kebakaran hutan dan lahan: BPBD dan SiPongi+ Kementerian Kehutanan.</li>
+          <li>Halaman Cuaca: galeri berisi peta resmi <a href="https://www.bmkg.go.id/" target="_blank" rel="noopener">BMKG</a> yang dimuat langsung dari server BMKG dan diperbarui oleh BMKG. Prakiraan 14 hari dan hari tanpa hujan berasal dari model Open-Meteo (bukan BMKG). Hujan 90 hari dan normal iklim 1991–2020 berasal dari <a href="https://power.larc.nasa.gov/" target="_blank" rel="noopener">NASA POWER</a> (reanalisis, resolusi sekitar 50 km), dengan kategori hari tanpa hujan dan sifat hujan menurut batas BMKG.</li>
           <li>Indikasi asap kiriman hanya memakai arah angin permukaan, jarak sampai 200 km, dan selisih AQI antarwilayah. Asap dari tempat yang jauh, misalnya dari provinsi lain, tidak tercakup.</li>
           <li>Saran bersifat umum dan tidak menggantikan nasihat tenaga kesehatan. Untuk keputusan penting seperti libur sekolah, ikuti pengumuman BPBD, pemerintah daerah, dan BMKG.</li>
           <li>Tidak ada akun. Catatan dan pengaturan hanya tersimpan di perangkat ini dan tidak dikirim ke server.</li>
@@ -133,6 +134,16 @@
     </section>
   </footer>
 </div>
+
+<!-- Peta BMKG yang diperbesar (galeri halaman Cuaca); di luar #view agar tidak tertutup saat halaman digambar ulang -->
+<dialog class="lb" id="lb" aria-labelledby="lb-j">
+  <div class="lb-h">
+    <h2 id="lb-j">Peta BMKG</h2>
+    <button class="ib" data-a="lbtutup" aria-label="Tutup peta">✕</button>
+  </div>
+  <div class="lb-w"><img id="lb-img" alt=""></div>
+  <p class="note" id="lb-k"></p>
+</dialog>
 
 <div class="toast" id="toast" role="status"></div>
 

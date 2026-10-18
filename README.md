@@ -7,7 +7,7 @@ Lima halaman:
 | Halaman | Isi |
 |---|---|
 | **Hari ini** | Kalimat keputusan, angka US AQI dan skala kategori, cuaca BMKG saat ini, ringkasan angka (PM2.5 jam ini, tertinggi/terendah 24 jam, tren), hasil ukur stasiun dengan perkiraan ISPU (bila token WAQI diisi), prakiraan cuaca BMKG per 3 jam dengan peringatan udara kabur/berasap, grafik 48 jam, saran per kelompok pengguna |
-| **Cuaca** | Grafik cuaca 3 hari BMKG (suhu, hujan, arah angin), prakiraan 14 hari (suhu dan peluang hujan), hari tanpa hujan dan hujan 90 hari dibanding normal (sifat hujan BMKG), iklim bulanan 1991–2020 dengan bulan relatif kering |
+| **Cuaca** | Galeri peta resmi BMKG (potensi kebakaran hutan, hari tanpa hujan, angin, citra satelit, prediksi hujan, gelombang) yang bisa diperbesar, grafik cuaca 3 hari BMKG (suhu, hujan, arah angin), prakiraan 14 hari (suhu dan peluang hujan), hari tanpa hujan dan hujan 90 hari dibanding normal (sifat hujan BMKG), iklim bulanan 1991–2020 dengan bulan relatif kering |
 | **Se-Riau** | Peta dan peringkat 12 kabupaten/kota (dengan cuaca BMKG tiap wilayah, titik panas satelit, dan stasiun ukur), indikasi asap kiriman, titik panas di arah datangnya angin |
 | **Rencana** | Jam aman 48 jam untuk delapan kegiatan (termasuk dua kegiatan kerja), garis waktu, jam terbaik, saran alternatif |
 | **Catatan** | Catatan gejala pribadi, pola gejala terhadap AQI, daftar kesiapan (tersimpan hanya di peramban) |
@@ -68,7 +68,7 @@ Butuh [Node.js](https://nodejs.org/) versi 16 atau lebih baru. Di terminal VS Co
 node tests/logic.test.js
 ```
 
-Semua baris harus berstatus `ok` dan baris terakhir menyatakan `75 uji lulus`. Uji mencakup data referensi, batas kategori, saran per kelompok, tren, jam aman, asap kiriman, pola gejala, pembaca respons API (Open-Meteo, BMKG, WAQI, petak vektor NASA), ISPU, titik panas di arah datangnya angin, normal iklim, hari tanpa hujan, hujan dibanding normal, kontras warna, dan pembuat SVG termasuk grafik halaman Cuaca. Tampilan di layar tidak diuji oleh berkas ini; pengujian tampilan pada laporan KP memakai Playwright terpisah.
+Semua baris harus berstatus `ok` dan baris terakhir menyatakan `76 uji lulus`. Uji mencakup data referensi, batas kategori, saran per kelompok, tren, jam aman, asap kiriman, pola gejala, pembaca respons API (Open-Meteo, BMKG, WAQI, petak vektor NASA), ISPU, titik panas di arah datangnya angin, normal iklim, hari tanpa hujan, hujan dibanding normal, kontras warna, dan pembuat SVG termasuk grafik halaman Cuaca. Tampilan di layar tidak diuji oleh berkas ini; pengujian tampilan pada laporan KP memakai Playwright terpisah.
 
 ### Mengaktifkan hasil ukur stasiun (token WAQI)
 
@@ -147,6 +147,7 @@ Font **Atkinson Hyperlegible** dan **Bricolage Grotesque** dimuat dari Google Fo
 - **Sumber:** [Open-Meteo](https://open-meteo.com/) Air Quality API (`us_aqi`, model CAMS) dan Forecast API (angin permukaan). Tanpa kunci API. Gratis untuk penggunaan nonkomersial dan menuntut atribusi, yang sudah ada di kaki halaman. Periksa ketentuan terbaru bila web dipakai di luar keperluan akademik.
 - **BMKG:** prakiraan cuaca resmi per 3 jam dari `api.bmkg.go.id/publik/prakiraan-cuaca` (data terbuka BMKG, wajib mencantumkan BMKG sebagai sumber; batas 60 permintaan/menit per IP). Satu kelurahan di pusat ibu kota tiap wilayah (kode `bm` di `js/data.js`). Dipakai untuk suhu, kelembapan, angin, dan kondisi cuaca termasuk "Udara Kabur" dan "Kabut/Asap". BMKG tidak menyediakan angka kualitas udara/ISPU lewat layanan terbuka, jadi angka AQI tetap dari Open-Meteo.
 - **Halaman Cuaca:**
+  - *Galeri peta BMKG:* enam peta resmi yang sama dengan bagian "Visualisasi Cuaca dan Iklim" di bmkg.go.id (`PETA_BMKG` di `js/data.js`), dimuat langsung dari `dataweb.bmkg.go.id`. Alamatnya tetap dan isinya diperbarui BMKG; web menambahkan `?v=` yang berganti tiap jam agar peta baru tidak tertahan cache. Sumber BMKG dicantumkan pada galeri dan jendela perbesaran. Peta baru dimuat saat kartunya hampir terlihat (di ponsel awalnya 2 peta, sekitar 1 MB); animasi citra satelit (sekitar 6,9 MB) hanya dimuat bila diketuk. Peta yang gagal dimuat diganti keterangan dan baru dicoba lagi pada jam berikutnya. Bila BMKG mengubah alamat atau memblokir pemakaian gambar dari luar situsnya, galeri menampilkan keterangan itu dan bagian lain tetap berjalan; perbarui alamat di `PETA_BMKG`.
   - *Cuaca 3 hari:* prakiraan BMKG yang sama dengan halaman Hari ini (24 periode tiga jam). Panah angin menunjuk ke arah angin bertiup.
   - *Prakiraan 14 hari dan hari tanpa hujan:* Open-Meteo Forecast API (`daily`, `past_days=92`, `forecast_days=16`, satu permintaan untuk 12 titik, cache 3 jam). Ini model cuaca global, bukan BMKG; untuk 3 hari ke depan utamakan BMKG. Hari disebut hujan bila minimal 1 mm. Kategori hari tanpa hujan mengikuti BMKG: 1–5 sangat pendek, 6–10 pendek, 11–20 menengah, 21–30 panjang, 31–60 sangat panjang, lebih dari 60 ekstrem panjang (`HTH_KAT` di `js/data.js`). BMKG menerbitkan peta hari tanpa hujan resmi tiap dasarian.
   - *Hujan 90 hari dibanding normal:* NASA POWER daily API (`PRECTOTCORR`, reanalisis MERRA-2/GEOS), satu permintaan per wilayah saat wilayah itu dilihat (cache 12 jam). Datanya tertinggal 3–5 hari. Sumbernya sama dengan normal iklim, jadi persentasenya sebanding. Sifat hujan memakai batas BMKG (bawah normal < 85 %, normal 85–115 %, atas normal > 115 %, `SIFAT_HUJAN`); BMKG memakainya untuk jumlah bulanan, di sini diterapkan pada 90 hari.
@@ -182,7 +183,8 @@ Font **Atkinson Hyperlegible** dan **Bricolage Grotesque** dimuat dari Google Fo
 | Jadwal pembaruan otomatis dan pemberitahuan perubahan | `js/app.js` → `segarkan`, `beritaUbah`; masa simpan tiap sumber di `js/api.js` (`CACHE_SEGAR`, `BMKG_SEGAR`, `API_SEGAR`, `WAQI_SEGAR`) |
 | Aturan jam aman per kegiatan | `js/data.js` → `KEGIATAN` dan `js/logic.js` → `windows`, `rentang`, `alternatif` |
 | Tampilan tiap halaman | `js/app.js` → `viewHari`, `viewCuaca`, `viewRiau`, `viewRencana`, `viewCatatan` |
-| Kartu halaman Cuaca | `js/app.js` → `kartuCuaca3`, `kartu14`, `kartuKering`, `kartuIklim`; grafiknya `js/svg.js` → `grafikBMKG`, `grafik14`, `grafik90`, `grafikIklim` |
+| Daftar, urutan, dan alamat peta galeri BMKG | `js/data.js` → `PETA_BMKG` (tampilan: `js/app.js` → `kartuGaleri`, `bukaPeta`) |
+| Kartu halaman Cuaca | `js/app.js` → `kartuGaleri`, `kartuCuaca3`, `kartu14`, `kartuKering`, `kartuIklim`; grafiknya `js/svg.js` → `grafikBMKG`, `grafik14`, `grafik90`, `grafikIklim` |
 | Batas hari hujan, kategori hari tanpa hujan, sifat hujan, bulan relatif kering | `js/data.js` → `AMBANG_HUJAN`, `HTH_KAT`, `SIFAT_HUJAN`, `AMBANG_KERING` |
 | Warna grafik cuaca (hujan, suhu) | `css/style.css` → `--hujan`, `--suhu` (diuji aman untuk buta warna dan kontras 3 : 1 pada tema terang dan gelap) |
 

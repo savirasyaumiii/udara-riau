@@ -166,6 +166,26 @@ const SIFAT_HUJAN = [[84, 'Bawah normal'], [115, 'Normal'], [Infinity, 'Atas nor
    kebakaran hutan dan lahan. Ini patokan rancangan, bukan penetapan musim oleh BMKG. */
 const AMBANG_KERING = 0.85;
 
+/* Peta resmi BMKG untuk galeri "Visualisasi cuaca dan iklim" di halaman Cuaca, sama dengan
+   bagian serupa di bmkg.go.id. Gambar dimuat langsung dari server BMKG; alamatnya tetap dan
+   isinya diperbarui BMKG. Diurutkan menurut kaitannya dengan kabut asap.
+   kb = perkiraan ukuran berkas (dicek 19 Oktober 2026), ketuk = baru dimuat setelah diketuk
+   (berkas besar, hemat data seluler). */
+const PETA_BMKG = [
+  { judul: 'Potensi kebakaran hutan dan lahan', ket: 'Tingkat kemudahan terbakar lapisan atas permukaan tanah (Fine Fuel Moisture Code), diperbarui harian',
+    src: 'https://dataweb.bmkg.go.id/cuaca/spartan/36_indonesia_ffmc_01.png', kb: 150 },
+  { judul: 'Hari tanpa hujan', ket: 'Jumlah hari berturut-turut tanpa hujan di Indonesia, diperbarui tiap dasarian',
+    src: 'https://dataweb.bmkg.go.id/iklim/hari-tanpa-hujan.png', kb: 815 },
+  { judul: 'Prakiraan angin', ket: 'Prakiraan angin lapisan 3000 kaki; menunjukkan ke mana asap dapat terbawa',
+    src: 'https://dataweb.bmkg.go.id/cuaca/angin/streamline-d10.jpg', kb: 1200 },
+  { judul: 'Citra satelit', ket: 'Animasi citra satelit cuaca Himawari-9 IR Enhanced',
+    src: 'https://dataweb.bmkg.go.id/cuaca/satelit/H08_EH_Indonesia.gif', kb: 6900, ketuk: true },
+  { judul: 'Prediksi hujan', ket: 'Prediksi curah hujan bulanan di wilayah Indonesia',
+    src: 'https://dataweb.bmkg.go.id/iklim/prediksi-hujan-bulanan/pch_bln_det_step2.png', kb: 170 },
+  { judul: 'Prakiraan tinggi gelombang', ket: 'Prakiraan tinggi gelombang di perairan Indonesia',
+    src: 'https://dataweb.bmkg.go.id/maritim/gelombang-maritim.png', kb: 245 }
+];
+
 /* Jumlah hari tiap bulan untuk normal iklim (Februari rata-rata 28,25 hari) */
 const HARI_BULAN = [31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const NAMA_BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
