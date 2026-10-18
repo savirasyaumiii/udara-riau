@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Udara Riau</title>
+<meta name="description" content="Panduan harian kualitas udara dan kabut asap untuk 12 kabupaten/kota di Provinsi Riau.">
+<meta name="theme-color" content="#13232E">
+<!-- Pratinjau tautan saat dibagikan (WhatsApp, Telegram, Facebook, X). og:url dan og:image harus
+     alamat lengkap (https://...), jadi baru diisi setelah alamat hosting diketahui; gambarnya sudah
+     ada di img/pratinjau.jpg (1200 x 630). Lihat README bagian "Membagikan ke publik". -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Udara Riau">
+<meta property="og:locale" content="id_ID">
+<meta property="og:title" content="Udara Riau: kabut asap dan kualitas udara 12 kabupaten/kota">
+<meta property="og:description" content="Cek kualitas udara, titik panas satelit, dan cuaca BMKG di Riau, lengkap dengan saran dan jam aman beraktivitas. Proyek KP Teknik Informatika UIR, bukan layanan resmi.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2313232E'/%3E%3Ccircle cx='16' cy='13' r='6' fill='%23F0523A'/%3E%3Cpath d='M5 21h22M8 25h16' stroke='%23F2A65A' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<!-- Font dimuat dari Google Fonts. Bila gagal dimuat, peramban memakai font bawaan sistem (lihat --font di css/style.css). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="skip" href="#view">Lewati ke konten</a>
+
+<div class="wrap">
+
+  <!-- Kepala halaman: nama web, status data, pemilih wilayah -->
+  <header class="top">
+    <div class="brand">
+      <svg class="logo" width="34" height="34" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect width="32" height="32" rx="9" fill="#13232E"/><circle cx="16" cy="13" r="6.5" fill="#F0523A"/><path d="M5 21h22M8 25.5h16" stroke="#F2A65A" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <div class="bt">
+        <h1>Udara Riau</h1>
+        <p class="tag">Kabut asap &amp; cuaca 12 kabupaten/kota</p>
+      </div>
+    </div>
+    <div class="sts">
+      <p class="stat" id="stat" role="status"></p>
+      <p class="stat bm" id="bstat"></p>
+    </div>
+    <div class="loc">
+      <label class="pick">
+        <span class="sr">Pilih wilayah (12 kabupaten dan kota)</span>
+        <svg class="pi" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <select id="city"></select>
+        <svg class="pc" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </label>
+      <button class="ib" id="rf" aria-label="Muat ulang data"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+    </div>
+  </header>
+
+  <!-- Menu empat halaman; diisi oleh app.js -->
+  <nav class="tabs" id="tabs" aria-label="Menu utama"></nav>
+
+  <div id="banner"></div>
+  <main id="view" tabindex="-1"></main>
+
+  <!-- Kaki halaman: pengaturan tampilan, mode simulasi, sumber data dan batasannya -->
+  <footer class="foot">
+    <section class="card set" aria-labelledby="h-set">
+      <h2 id="h-set">Pengaturan</h2>
+
+      <div class="srow">
+        <span id="l-fs">Ukuran teks</span>
+        <div class="sc" role="group" aria-labelledby="l-fs">
+          <button class="ib" id="fm" aria-label="Perkecil teks">A−</button>
+          <output id="fv" aria-live="polite">100%</output>
+          <button class="ib" id="fp" aria-label="Perbesar teks">A+</button>
+        </div>
+      </div>
+
+      <div class="srow">
+        <span id="l-th">Tema</span>
+        <div class="sc" role="group" aria-labelledby="l-th">
+          <button class="chip" id="th-l" aria-pressed="false">Terang</button>
+          <button class="chip" id="th-d" aria-pressed="false">Gelap</button>
+        </div>
+      </div>
+
+      <div class="srow col">
+        <span>Pembaruan otomatis</span>
+        <p class="note" id="auto">Aktif selama halaman terbuka.</p>
+      </div>
+
+      <div class="srow col">
+        <span id="l-sim">Mode simulasi</span>
+        <p class="note">Untuk memperagakan tampilan pada setiap kondisi udara tanpa data langsung. Angkanya bukan data nyata.</p>
+        <button class="chip" id="simb" aria-pressed="false">Aktifkan simulasi</button>
+        <div id="sim" hidden>
+          <label for="sl" class="note">Tingkat dasar AQI simulasi: <b id="sv">120</b></label>
+          <input type="range" id="sl" min="0" max="300" value="120">
+        </div>
+      </div>
+
+      <details class="src">
+        <summary>Sumber data dan batasannya</summary>
+        <ul>
+          <li>Angka berasal dari model kualitas udara (CAMS) yang disajikan <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> dalam skala US AQI, dan arah angin dari layanan prakiraan yang sama. Titik data berada di pusat kota atau ibu kota kabupaten.</li>
+          <li>Suhu, kelembapan, angin, dan kondisi cuaca (termasuk “Udara Kabur” dan “Kabut/Asap”) berasal dari prakiraan cuaca resmi <a href="https://data.bmkg.go.id/" target="_blank" rel="noopener">BMKG</a> per 3 jam untuk satu kelurahan di pusat ibu kota tiap wilayah. BMKG tidak menyediakan angka kualitas udara lewat layanan terbuka, jadi angka AQI tidak berasal dari BMKG.</li>
+          <li>US AQI dihitung dari rata-rata 24 jam sehingga lebih lambat berubah. Karena itu kadar PM2.5 jam ini juga ditampilkan, beserta kategori yang setara menurut tabel EPA.</li>
+          <li>Resolusi model sekitar 45 km, jadi wilayah yang berdekatan dapat menunjukkan angka mirip. Angka AQI utama adalah perkiraan model, bukan pengukuran langsung, bukan angka ISPU resmi, dan dapat berbeda dari aplikasi lain.</li>
+          <li>Hasil ukur stasiun (bila diaktifkan pemilik web) berasal dari alat ukur PM2.5 BMKG Pekanbaru dan stasiun lain di sekitar Riau yang diteruskan <a href="https://waqi.info/" target="_blank" rel="noopener">World Air Quality Index Project</a>. Satu stasiun hanya menggambarkan keadaan di titik itu. Nilai ISPU dihitung dari PM2.5 jam ini menurut Permen LHK No. 14 Tahun 2020 sebagai perkiraan, bukan ISPU resmi.</li>
+          <li>Titik panas berasal dari satelit VIIRS (NOAA-20, NOAA-21, Suomi NPP) yang disajikan <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS</a> lewat NASA GIBS, untuk 48 jam terakhir. Satelit hanya mendeteksi saat melintas, titik panas belum tentu kebakaran lahan, dan api dapat tertutup awan atau asap. Informasi resmi kebakaran hutan dan lahan: BPBD dan SiPongi+ Kementerian Kehutanan.</li>
+          <li>Indikasi asap kiriman hanya memakai arah angin permukaan, jarak sampai 200 km, dan selisih AQI antarwilayah. Asap dari tempat yang jauh, misalnya dari provinsi lain, tidak tercakup.</li>
+          <li>Saran bersifat umum dan tidak menggantikan nasihat tenaga kesehatan. Untuk keputusan penting seperti libur sekolah, ikuti pengumuman BPBD, pemerintah daerah, dan BMKG.</li>
+          <li>Tidak ada akun. Catatan dan pengaturan hanya tersimpan di perangkat ini dan tidak dikirim ke server.</li>
+        </ul>
+      </details>
+
+      <div id="lg"></div>
+    </section>
+
+    <!-- Penegasan bahwa web ini bukan layanan resmi, beserta rujukan ke sumber resmi -->
+    <section class="card about" aria-labelledby="h-about">
+      <h2 id="h-about">Tentang web ini</h2>
+      <p><b>Bukan layanan resmi pemerintah.</b> Udara Riau adalah proyek Kerja Praktik mahasiswa Teknik Informatika Universitas Islam Riau. Web ini tidak mewakili BMKG, NASA, atau instansi mana pun, dan hanya menampilkan ulang data terbuka dari sumber yang disebut pada bagian “Sumber data dan batasannya”.</p>
+      <p>Saran di web ini bersifat umum, bukan nasihat medis. Bila sesak napas berat atau nyeri dada, segera ke fasilitas kesehatan.</p>
+      <p class="note" id="l-resmi">Informasi dan keputusan resmi:</p>
+      <ul class="resmi" aria-labelledby="l-resmi">
+        <li><a class="chip" href="https://www.bmkg.go.id/" target="_blank" rel="noopener">BMKG</a></li>
+        <li><a class="chip" href="https://bpbd.riau.go.id/" target="_blank" rel="noopener">BPBD Provinsi Riau</a></li>
+        <li><a class="chip" href="https://ispu.kemenlh.go.id/" target="_blank" rel="noopener">ISPU (Kementerian LH)</a></li>
+        <li><a class="chip" href="https://sipongi.gakkum.kehutanan.go.id/" target="_blank" rel="noopener">SiPongi+ (kebakaran hutan dan lahan)</a></li>
+      </ul>
+    </section>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<!-- Urutan muat penting: token -> data -> logika -> akses data -> gambar -> pengendali -->
+<script src="js/kunci.js"></script>
+<script src="js/data.js"></script>
+<script src="js/logic.js"></script>
+<script src="js/api.js"></script>
+<script src="js/svg.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

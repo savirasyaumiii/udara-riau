@@ -1,0 +1,4 @@
+# Teks selalu disimpan dan dipakai dengan akhir baris LF, gambar disimpan apa adanya
+* text=auto eol=lf
+*.jpg binary
+*.png binary
