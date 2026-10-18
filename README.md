@@ -79,9 +79,13 @@ Titik panas satelit (halaman Se-Riau) tidak memerlukan token.
 
 ## Hosting gratis (situs statis)
 
-Cukup unggah isi folder. Tidak perlu server, basis data, atau perintah *build*. Semua penyedia di bawah memberi alamat HTTPS gratis.
+**Alamat resmi web ini: <https://udara-riau.pages.dev>** (Cloudflare Pages, terhubung ke repositori <https://github.com/savirasyaumiii/udara-riau>, cabang `main`). Setiap `git push` ke cabang `main` otomatis memasang ulang web dalam sekitar 1 menit; riwayat pemasangan ada di dasbor Cloudflare → Workers & Pages → `udara-riau`.
 
-**A. GitHub Pages (disarankan untuk laporan KP)**
+Pengaturan proyek Cloudflare Pages yang dipakai (dasbor: **Create app → Continue to Pages → Import an existing Git repository**): framework preset **None**, build command kosong, build output directory kosong (folder utama), production branch `main`.
+
+Cara lain di bawah tetap bisa dipakai bila ingin memasang salinan di tempat lain. Cukup unggah isi folder. Tidak perlu server, basis data, atau perintah *build*. Semua penyedia di bawah memberi alamat HTTPS gratis.
+
+**A. GitHub Pages**
 
 1. Buat akun di <https://github.com> dan repositori publik baru bernama `udara-riau`.
 2. Di terminal VS Code, dari dalam folder proyek:
@@ -118,14 +122,9 @@ Sudah disiapkan di web:
 - Kartu **Tentang web ini** di kaki halaman: penegasan bahwa web ini proyek KP dan **bukan layanan resmi pemerintah**, bahwa saran bukan nasihat medis, serta tautan ke sumber resmi (BMKG, BPBD Provinsi Riau, ISPU Kementerian Lingkungan Hidup, SiPongi+ Kementerian Kehutanan). Alamat tautan dicek aktif pada 19 Oktober 2026.
 - Pratinjau tautan (judul, deskripsi, dan gambar `img/pratinjau.jpg`) untuk WhatsApp, Telegram, Facebook, dan X.
 
-Setelah alamat hosting diketahui, tambahkan dua baris ini di `<head>` pada `index.html`, tepat di bawah `og:description` (ganti alamatnya). Keduanya harus alamat lengkap; tanpa itu pratinjau tampil tanpa gambar.
+Baris `og:url` dan `og:image` di `<head>` pada `index.html` sudah diisi dengan alamat `https://udara-riau.pages.dev/`. Keduanya harus alamat lengkap; tanpa itu pratinjau tampil tanpa gambar. **Bila nanti memakai domain sendiri, ganti alamat pada kedua baris itu.**
 
-```html
-<meta property="og:url" content="https://udara-riau.pages.dev/">
-<meta property="og:image" content="https://udara-riau.pages.dev/img/pratinjau.jpg">
-```
-
-Lalu kirim tautannya ke diri sendiri di WhatsApp untuk mengecek pratinjau. WhatsApp menyimpan pratinjau lama, jadi bila sudah terlanjur dibagikan sebelum baris di atas ditambahkan, coba dengan alamat yang diberi akhiran seperti `?v=2`.
+Kirim tautannya ke diri sendiri di WhatsApp untuk mengecek pratinjau. WhatsApp menyimpan pratinjau lama, jadi bila sudah terlanjur dibagikan sebelum baris di atas ditambahkan, coba dengan alamat yang diberi akhiran seperti `?v=2`.
 
 Sebelum dibuka luas ke masyarakat:
 
