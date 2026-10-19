@@ -1,6 +1,6 @@
-# Udara Riau
+# Riau AirWatch
 
-Panduan harian kualitas udara dan kabut asap untuk 12 kabupaten/kota di Provinsi Riau. Web statis (HTML, CSS, JavaScript tanpa kerangka kerja, tanpa server, tanpa basis data) yang dibuat sebagai proyek Kerja Praktik Teknik Informatika UIR dengan pendekatan *Design Thinking*. Judul proyek: *Perancangan Pengalaman Pengguna Web Panduan Kualitas Udara dan Kabut Asap 12 Kabupaten/Kota di Provinsi Riau untuk Mendukung Aktivitas Kerja Pegawai dengan Metode Design Thinking (Studi Kasus: Pegawai Kantor Cabang Bank di Pekanbaru)*. Aspek studi kasus pegawai ada pada kelompok pengguna **Pegawai kantor** dan kegiatan **Berangkat atau pulang kerja** serta **Kunjungan nasabah atau kerja di luar kantor** pada halaman Rencana.
+Panduan harian kualitas udara dan kabut asap untuk 12 kabupaten/kota di Provinsi Riau. Web statis (HTML, CSS, JavaScript tanpa kerangka kerja, tanpa server, tanpa basis data) yang dibuat sebagai proyek Kerja Praktik Teknik Informatika UIR dengan pendekatan *Design Thinking*. Nama sebelumnya *Udara Riau*; folder proyek dan repositori GitHub tetap bernama `udara-riau`. Judul proyek: *Perancangan Pengalaman Pengguna Web Panduan Kualitas Udara dan Kabut Asap 12 Kabupaten/Kota di Provinsi Riau untuk Mendukung Aktivitas Kerja Pegawai dengan Metode Design Thinking (Studi Kasus: Pegawai Kantor Cabang Bank di Pekanbaru)*. Aspek studi kasus pegawai ada pada kelompok pengguna **Pegawai kantor** dan kegiatan **Berangkat atau pulang kerja** serta **Kunjungan nasabah atau kerja di luar kantor** pada halaman Rencana.
 
 Lima halaman:
 
@@ -84,7 +84,9 @@ Titik panas satelit (halaman Se-Riau) tidak memerlukan token.
 
 ## Hosting gratis (situs statis)
 
-**Alamat resmi web ini: <https://udara-riau.pages.dev>** (Cloudflare Pages, terhubung ke repositori <https://github.com/savirasyaumiii/udara-riau>, cabang `main`). Setiap `git push` ke cabang `main` otomatis memasang ulang web dalam sekitar 1 menit; riwayat pemasangan ada di dasbor Cloudflare → Workers & Pages → `udara-riau`.
+**Alamat resmi web ini: <https://riauairwatch.pages.dev>** (Cloudflare Pages, terhubung ke repositori <https://github.com/savirasyaumiii/udara-riau>, cabang `main`). Setiap `git push` ke cabang `main` otomatis memasang ulang web dalam sekitar 1 menit; riwayat pemasangan ada di dasbor Cloudflare → Workers & Pages → `riauairwatch`.
+
+Alamat lama <https://udara-riau.pages.dev> (proyek Cloudflare `udara-riau`, dari nama sebelumnya) tetap aktif dan terpasang dari repositori yang sama, tetapi langsung mengarahkan pengunjung ke alamat baru beserta halaman yang dibuka (skrip pendek di awal `<head>` pada `index.html`). Tautan lama yang sudah terlanjur dibagikan jadi tetap berfungsi. Bila proyek `udara-riau` di Cloudflare dihapus, alamat lama berhenti bekerja dan skrip itu boleh dibuang.
 
 Pengaturan proyek Cloudflare Pages yang dipakai (dasbor: **Create app → Continue to Pages → Import an existing Git repository**): framework preset **None**, build command kosong, build output directory kosong (folder utama), production branch `main`.
 
@@ -97,7 +99,7 @@ Cara lain di bawah tetap bisa dipakai bila ingin memasang salinan di tempat lain
    ```
    git init
    git add .
-   git commit -m "Udara Riau"
+   git commit -m "Riau AirWatch"
    git branch -M main
    git remote add origin https://github.com/USERNAME/udara-riau.git
    git push -u origin main
@@ -127,7 +129,7 @@ Sudah disiapkan di web:
 - Kartu **Tentang web ini** di kaki halaman: penegasan bahwa web ini proyek KP dan **bukan layanan resmi pemerintah**, bahwa saran bukan nasihat medis, serta tautan ke sumber resmi (BMKG, BPBD Provinsi Riau, ISPU Kementerian Lingkungan Hidup, SiPongi+ Kementerian Kehutanan). Alamat tautan dicek aktif pada 19 Oktober 2026.
 - Pratinjau tautan (judul, deskripsi, dan gambar `img/pratinjau.jpg`) untuk WhatsApp, Telegram, Facebook, dan X.
 
-Baris `og:url` dan `og:image` di `<head>` pada `index.html` sudah diisi dengan alamat `https://udara-riau.pages.dev/`. Keduanya harus alamat lengkap; tanpa itu pratinjau tampil tanpa gambar. **Bila nanti memakai domain sendiri, ganti alamat pada kedua baris itu.**
+Baris `og:url` dan `og:image` di `<head>` pada `index.html` sudah diisi dengan alamat `https://riauairwatch.pages.dev/`. Keduanya harus alamat lengkap; tanpa itu pratinjau tampil tanpa gambar. **Bila nanti memakai domain sendiri, ganti alamat pada kedua baris itu.**
 
 Kirim tautannya ke diri sendiri di WhatsApp untuk mengecek pratinjau. WhatsApp menyimpan pratinjau lama, jadi bila sudah terlanjur dibagikan sebelum baris di atas ditambahkan, coba dengan alamat yang diberi akhiran seperti `?v=2`.
 

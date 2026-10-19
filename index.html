@@ -3,24 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Udara Riau</title>
+<!-- Alamat lama (nama sebelumnya "Udara Riau") diarahkan ke alamat baru; tab yang dibuka (#cuaca dll.) ikut terbawa. -->
+<script>if (location.hostname === 'udara-riau.pages.dev') location.replace('https://riauairwatch.pages.dev/' + location.search + location.hash);</script>
+<title>Riau AirWatch</title>
 <meta name="description" content="Panduan harian kualitas udara dan kabut asap untuk 12 kabupaten/kota di Provinsi Riau.">
 <meta name="theme-color" content="#13232E">
 <!-- Pratinjau tautan saat dibagikan (WhatsApp, Telegram, Facebook, X). og:url dan og:image harus
      alamat lengkap (https://...); ganti keduanya bila web dipindah ke domain lain.
      Gambar: img/pratinjau.jpg (1200 x 630). Lihat README bagian "Membagikan ke publik". -->
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Udara Riau">
+<meta property="og:site_name" content="Riau AirWatch">
 <meta property="og:locale" content="id_ID">
-<meta property="og:title" content="Udara Riau: kabut asap dan kualitas udara 12 kabupaten/kota">
+<meta property="og:title" content="Riau AirWatch: kabut asap dan kualitas udara 12 kabupaten/kota">
 <meta property="og:description" content="Cek kualitas udara, titik panas satelit, dan cuaca BMKG di Riau, lengkap dengan saran dan jam aman beraktivitas. Proyek KP Teknik Informatika UIR, bukan layanan resmi.">
-<meta property="og:url" content="https://udara-riau.pages.dev/">
-<meta property="og:image" content="https://udara-riau.pages.dev/img/pratinjau.jpg">
+<meta property="og:url" content="https://riauairwatch.pages.dev/">
+<meta property="og:image" content="https://riauairwatch.pages.dev/img/pratinjau.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Udara Riau: kabut asap dan kualitas udara 12 kabupaten/kota di Provinsi Riau">
+<meta property="og:image:alt" content="Riau AirWatch: kabut asap dan kualitas udara 12 kabupaten/kota di Provinsi Riau">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="canonical" href="https://udara-riau.pages.dev/">
+<link rel="canonical" href="https://riauairwatch.pages.dev/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2313232E'/%3E%3Ccircle cx='16' cy='13' r='6' fill='%23F0523A'/%3E%3Cpath d='M5 21h22M8 25h16' stroke='%23F2A65A' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
 <!-- Font dimuat dari Google Fonts. Bila gagal dimuat, peramban memakai font bawaan sistem (lihat --font di css/style.css). -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,7 +40,7 @@
     <div class="brand">
       <svg class="logo" width="34" height="34" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect width="32" height="32" rx="9" fill="#13232E"/><circle cx="16" cy="13" r="6.5" fill="#F0523A"/><path d="M5 21h22M8 25.5h16" stroke="#F2A65A" stroke-width="2.2" stroke-linecap="round"/></svg>
       <div class="bt">
-        <h1>Udara Riau</h1>
+        <h1>Riau AirWatch</h1>
         <p class="tag">Kabut asap &amp; cuaca 12 kabupaten/kota</p>
       </div>
     </div>
@@ -122,7 +124,7 @@
     <!-- Penegasan bahwa web ini bukan layanan resmi, beserta rujukan ke sumber resmi -->
     <section class="card about" aria-labelledby="h-about">
       <h2 id="h-about">Tentang web ini</h2>
-      <p><b>Bukan layanan resmi pemerintah.</b> Udara Riau adalah proyek Kerja Praktik mahasiswa Teknik Informatika Universitas Islam Riau. Web ini tidak mewakili BMKG, NASA, atau instansi mana pun, dan hanya menampilkan ulang data terbuka dari sumber yang disebut pada bagian “Sumber data dan batasannya”.</p>
+      <p><b>Bukan layanan resmi pemerintah.</b> Riau AirWatch adalah proyek Kerja Praktik mahasiswa Teknik Informatika Universitas Islam Riau. Web ini tidak mewakili BMKG, NASA, atau instansi mana pun, dan hanya menampilkan ulang data terbuka dari sumber yang disebut pada bagian “Sumber data dan batasannya”.</p>
       <p>Saran di web ini bersifat umum, bukan nasihat medis. Bila sesak napas berat atau nyeri dada, segera ke fasilitas kesehatan.</p>
       <p class="note" id="l-resmi">Informasi dan keputusan resmi:</p>
       <ul class="resmi" aria-labelledby="l-resmi">
