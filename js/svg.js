@@ -87,16 +87,33 @@ function ikon(n, s) {
 }
 
 /* ---------- langit asap (hero) ----------
-   Satu adegan: matahari, kabut, dan siluet pohon sawit. Makin tinggi AQI,
-   makin tebal kabutnya dan makin merah mataharinya, seperti langit saat kabut
-   asap. Langit sendiri (gradasi) digambar oleh CSS lewat variabel --z --m --h. */
+   Adegan kebun sawit di bawah kartu keputusan: matahari, kabut, dan siluet pohon sawit.
+   Makin tinggi AQI, makin tebal kabutnya dan makin merah mataharinya, seperti langit saat
+   kabut asap. Langit sendiri (gradasi) digambar oleh CSS lewat variabel --z --m --h.
+   Bagian yang bergerak (css/style.css, hanya bila perangkat tidak meminta gerakan dikurangi):
+   pelepah sawit bergoyang tertiup angin; saat udara baik atau sedang ada awan berarak dan
+   burung terbang; mulai kategori sensitif muncul kepulan asap dari titik api di kejauhan dan
+   debu halus melayang, makin banyak bila udara makin buruk. Arah gerak dan kencang goyangan
+   mengikuti angin wilayah terpilih. Tanpa gerak, semuanya tampil diam pada posisi dasarnya. */
+
+/* Angin untuk animasi. dir = arah ASAL angin (derajat), jadi angin bertiup ke dir + 180°
+   dan komponen timur-baratnya -sin(dir). ar = 1 bila gerakan ke kanan (ke timur), -1 ke kiri
+   (ke barat); awan = lama satu lintasan awan (detik); amp = besar goyangan pelepah (derajat).
+   Tanpa data angin: ke kanan, pelan. */
+function gerakAngin(angin) {
+  if (!angin || angin.dir == null || angin.spd == null) return { ar: 1, awan: 110, amp: 1.6 };
+  const x = -Math.sin(angin.dir * Math.PI / 180), v = Math.max(0, angin.spd);
+  return { ar: x < -0.05 ? -1 : 1, awan: Math.round(Math.max(45, 120 - v * 4)), amp: +Math.min(4, 1 + v / 6).toFixed(2) };
+}
 
 /* Satu pohon sawit: batang meruncing + 8 pelepah melengkung. x,y = pangkal batang,
-   h = tinggi, lean = condong ke samping, sc = skala. */
-function sawit(x, y, h, lean, sc, col) {
+   h = tinggi, lean = condong ke samping, sc = skala. Pelepah dikelompokkan (class dn) dengan
+   titik putar di pucuk batang agar bisa bergoyang; gaya = style tambahan (lama dan jeda goyangan). */
+function sawit(x, y, h, lean, sc, col, gaya) {
   const tx = x + lean, ty = y - h, w = 3.4 * sc;
   let s = '<path d="M' + (x - w) + ' ' + y + 'Q' + (x + lean * .2) + ' ' + (y - h * .5) + ' ' + (tx - w * .4) + ' ' + ty +
           'L' + (tx + w * .4) + ' ' + ty + 'Q' + (x + lean * .2 + w) + ' ' + (y - h * .5) + ' ' + (x + w) + ' ' + y + 'Z" fill="' + col + '"/>';
+  s += '<g class="dn" style="transform-origin:' + tx + 'px ' + ty + 'px' + (gaya ? ';' + gaya : '') + '">';
   const A = [-172, -148, -124, -100, -76, -52, -28, -6], Ln = [.95, 1, .9, .8, .8, .9, 1, .95];
   A.forEach((deg, i) => {
     const r = deg * Math.PI / 180, L = 44 * sc * Ln[i];
@@ -106,51 +123,83 @@ function sawit(x, y, h, lean, sc, col) {
     s += '<path d="' + d + '" stroke="' + col + '" stroke-width="' + (2.2 * sc).toFixed(1) + '" fill="none" stroke-linecap="round"/>';
     s += '<path d="' + d + '" stroke="' + col + '" stroke-width="' + (8 * sc).toFixed(1) + '" stroke-dasharray="1.4 2.4" fill="none"/>';
   });
-  return s;
+  return s + '</g>';
 }
 
-function adegan(k) {
-  const c = KATEGORI[k], hz = c.haze, dark = '#08120D';
+function adegan(k, angin) {
+  const c = KATEGORI[k], hz = c.haze, dark = '#08120D', g = gerakAngin(angin);
   const near = [[430, 200, 118, -12, 1.15], [525, 200, 88, 10, .9], [880, 200, 132, 14, 1.25], [985, 200, 96, -8, .95],
                 [235, 200, 100, 10, 1], [1085, 200, 112, -10, 1.05], [70, 200, 86, 8, .85], [1160, 200, 94, -6, .95]];
   const far = [[150, 174, 60, 4, .6], [345, 174, 62, 5, .62], [600, 174, 54, -4, .55], [800, 174, 66, 6, .66], [1010, 174, 58, -5, .6]];
-  return '<svg class="scene" viewBox="0 0 1200 200" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">' +
+  /* awan dan burung hanya saat udara baik atau sedang: [x, y, skala, posisi awal dalam lintasan].
+     Posisi awal sekitar 0,5 = tepat di posisi dasarnya, jadi saat halaman dibuka awan sudah terlihat. */
+  const awan = k <= 1 ? [[170, 38, 1.1, .5], [520, 24, .8, .46], [880, 50, 1.25, .53], [1130, 30, .9, .49]] : [];
+  const burung = k <= 1 ? [[590, 62, 1], [620, 74, .8], [646, 58, .9], [668, 70, .7]] : [];
+  /* titik api di kejauhan (kepulan asap) dan butir debu halus, makin banyak bila udara makin buruk */
+  const api = [[150, 168], [560, 166], [1030, 167], [340, 170], [800, 166]].slice(0, [0, 0, 2, 3, 4, 5][k]);
+  const nDebu = [0, 0, 8, 12, 16, 20][k];
+  let debu = '';
+  for (let i = 0; i < nDebu; i++) {
+    debu += '<circle class="db" cx="' + ((i * 137 + 40) % 1200) + '" cy="' + (50 + (i * 53) % 110) + '" r="' + (1.2 + (i % 3) * .5).toFixed(1) +
+            '" style="animation-delay:-' + ((i * 1.3) % 8).toFixed(1) + 's"/>';
+  }
+  return '<svg class="scene" viewBox="0 0 1200 200" preserveAspectRatio="xMidYMax slice" style="--ar:' + g.ar + ';--amp:' + g.amp + '" aria-hidden="true" focusable="false">' +
     '<defs>' +
       '<radialGradient id="sg' + k + '"><stop offset="0" stop-color="' + c.sun + '" stop-opacity="' + (.8 - hz * .35).toFixed(2) + '"/><stop offset="1" stop-color="' + c.sun + '" stop-opacity="0"/></radialGradient>' +
       '<linearGradient id="hg' + k + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + c.h + '" stop-opacity="0"/><stop offset=".5" stop-color="' + c.h + '"/><stop offset="1" stop-color="' + c.h + '"/></linearGradient>' +
+      '<radialGradient id="kp' + k + '"><stop offset="0" stop-color="#2E2420"/><stop offset=".5" stop-color="#2E2420" stop-opacity=".75"/><stop offset="1" stop-color="#2E2420" stop-opacity="0"/></radialGradient>' +
       '<filter id="sb' + k + '" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="' + (.4 + hz * 3).toFixed(2) + '"/></filter>' +
     '</defs>' +
     '<circle class="glow" cx="690" cy="106" r="100" fill="url(#sg' + k + ')"/>' +
     '<circle cx="690" cy="104" r="' + (30 + hz * 8).toFixed(1) + '" fill="' + c.sun + '" filter="url(#sb' + k + ')"/>' +
+    awan.map(([x, y, s, f]) => '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')"><g class="awn" style="animation-duration:' + Math.round(g.awan * (1.3 - s * .3)) +
+      's;animation-delay:-' + Math.round(g.awan * f) + 's"><ellipse cx="-14" cy="3" rx="24" ry="9"/><ellipse cx="9" cy="-3" rx="20" ry="12"/><ellipse cx="30" cy="4" rx="15" ry="7"/></g></g>').join('') +
     '<path d="M0 174Q200 150 420 164T820 158T1200 166V200H0Z" fill="' + dark + '" opacity=".32"/>' +
-    '<g opacity=".5">' + far.map(p => sawit(p[0], p[1], p[2], p[3], p[4], dark)).join('') + '</g>' +
+    '<g class="jauh" opacity=".5" style="--amp:' + (g.amp * .5).toFixed(2) + '">' + far.map((p, i) => sawit(p[0], p[1], p[2], p[3], p[4], dark,
+      'animation-duration:' + (4.6 + (i % 3) * .7).toFixed(1) + 's;animation-delay:-' + (i * 1.1).toFixed(1) + 's')).join('') + '</g>' +
     '<g class="haze"><rect x="-80" y="36" width="1360" height="172" fill="url(#hg' + k + ')" opacity="' + hz + '"/></g>' +
+    api.map(([x, y], i) => '<g class="asap" transform="translate(' + x + ' ' + y + ')" style="--pd:-' + (i * 2.3).toFixed(1) + 's">' + '<circle class="kp" r="20" fill="url(#kp' + k + ')"/>'.repeat(4) +
+      '<ellipse cx="0" cy="-50" rx="15" ry="54" fill="url(#kp' + k + ')" opacity=".35" transform="rotate(' + g.ar * 14 + ')"/></g>').join('') +
+    debu +
     '<path d="M0 200V178Q150 166 320 173T640 171T960 175T1200 169V200Z" fill="' + dark + '"/>' +
-    '<g opacity=".94">' + near.map(p => sawit(p[0], p[1], p[2], p[3], p[4], dark)).join('') + '</g>' +
+    '<g class="dekat" opacity=".94">' + near.map((p, i) => sawit(p[0], p[1], p[2], p[3], p[4], dark,
+      'animation-duration:' + (3.4 + (i % 4) * .6).toFixed(1) + 's;animation-delay:-' + (i * .7).toFixed(1) + 's')).join('') + '</g>' +
+    burung.map(([x, y, s], i) => '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')"><g class="brg"><path class="spy" d="M-8 0Q-4-5 0 0Q4-5 8 0" style="animation-delay:-' +
+      (i * .23).toFixed(2) + 's"/></g></g>').join('') +
     '</svg>';
 }
 
 /* ---------- latar halaman ----------
-   Siluet pemandangan Riau di dasar layar, di belakang semua kartu: bukit dan pohon sawit
-   di kejauhan, jembatan kabel di atas sungai, dan rumah panggung Melayu dengan selembayung
-   (hiasan bersilang di puncak atap). Satu warna (currentColor); warna langit, matahari, dan
-   kabut diatur CSS (.latar) dari kategori wilayah terpilih. */
+   Siluet kota Pekanbaru di dasar layar, di belakang semua kartu, sengaja berbeda dari kebun
+   sawit di kartu keputusan: gedung-gedung di kejauhan, masjid berkubah dengan dua menara,
+   jembatan kabel di atas sungai, ruko, dan rumah panggung Melayu dengan selembayung (hiasan
+   bersilang di puncak atap). Satu warna (currentColor); warna langit, matahari, dan kabut
+   diatur CSS (.latar) dari kategori wilayah terpilih. */
 function latar() {
-  const far = [[90, 198, 56, 4, .55], [250, 196, 62, -5, .6], [520, 198, 52, 3, .5], [700, 195, 60, -4, .58], [960, 198, 54, 5, .52], [1560, 196, 60, 4, .58]];
-  const near = [[40, 217, 104, 8, 1], [170, 216, 82, -6, .82], [470, 215, 118, -10, 1.1], [600, 214, 90, 9, .88], [860, 215, 108, 7, 1.02], [1010, 216, 84, -8, .84], [1530, 216, 112, -9, 1.06]];
+  /* gedung di kejauhan: [x, lebar, tinggi]; yang tinggi diberi antena */
+  const gedung = [[20, 46, 52], [70, 34, 78], [110, 50, 40], [660, 40, 70], [704, 30, 96], [740, 52, 60], [796, 36, 120], [838, 44, 84],
+                  [888, 30, 64], [924, 56, 102], [986, 40, 72], [1494, 44, 58], [1544, 40, 88]];
+  let jauh = '<path d="M0 206Q180 198 380 202T780 200T1180 204T1600 198V240H0Z" fill="currentColor"/>';
+  gedung.forEach(([x, w, h]) => {
+    jauh += '<path d="M' + x + ' 206V' + (206 - h) + 'h' + w + 'V206z" fill="currentColor"/>';
+    if (h >= 95) jauh += '<path d="M' + (x + w / 2) + ' ' + (206 - h) + 'v-16" stroke="currentColor" stroke-width="2"/>';
+  });
   let jb = '<path d="M1060 186H1480" stroke="currentColor" stroke-width="5"/>';
   [1180, 1360].forEach(x => {
     jb += '<path d="M' + (x - 5) + ' 204L' + (x - 3) + ' 112H' + (x + 3) + 'L' + (x + 5) + ' 204Z" fill="currentColor"/>';
     [-110, -80, -50, 50, 80, 110].forEach(d => { jb += '<path d="M' + x + ' 118L' + (x + d) + ' 186" stroke="currentColor" stroke-width="1.4"/>'; });
   });
+  const ruko = '<path d="M118 216V186h84v30zM114 188h92l-8-11h-76z" fill="currentColor"/>';
   const rumah = '<path d="M262 216V196h4v20zM292 216V196h4v20zM322 216V196h4v20zM344 216V196h4v20zM248 197h108v-5H248zM256 192V160h92v32zM238 164L302 116L366 164z" fill="currentColor"/>' +
     '<path d="M302 118Q292 106 284 98M302 118Q312 106 320 98M356 197L372 216" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/>';
+  const masjid = '<path d="M450 216V178h140v38zM462 178A58 50 0 0 1 578 178zM446 178a16 14 0 0 1 32 0zM562 178a16 14 0 0 1 32 0z' +
+    'M416 216V104h10v112zM412 104h18l-9-18zM413 140h16v4h-16zM614 216V104h10v112zM610 104h18l-9-18zM611 140h16v4h-16z" fill="currentColor"/>' +
+    '<path d="M520 128v-14" stroke="currentColor" stroke-width="3"/><circle cx="520" cy="110" r="4" fill="currentColor"/>';
   return '<svg viewBox="0 0 1600 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">' +
-    '<g class="lj"><path d="M0 206Q180 188 380 198T780 192T1180 200T1600 190V240H0Z" fill="currentColor"/>' +
-      far.map(p => sawit(p[0], p[1], p[2], p[3], p[4], 'currentColor')).join('') + jb + '</g>' +
-    '<path d="M0 240V214Q120 208 260 214T560 212T900 215Q1000 212 1080 222V240ZM1460 224Q1530 212 1600 214V240H1460Z" fill="currentColor"/>' +
+    '<g class="lj">' + jauh + jb + '</g>' +
+    '<path d="M0 240V216Q160 210 330 214T700 213T1060 222V240ZM1460 224Q1530 214 1600 216V240H1460Z" fill="currentColor"/>' +
     '<path d="M1120 230h60M1220 226h80M1340 233h70M1170 237h50" stroke="currentColor" stroke-width="2" opacity=".5"/>' +
-    rumah + near.map(p => sawit(p[0], p[1], p[2], p[3], p[4], 'currentColor')).join('') +
+    ruko + rumah + masjid +
     '</svg>';
 }
 

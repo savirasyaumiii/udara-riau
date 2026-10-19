@@ -788,9 +788,35 @@ uji('latar: judul dan keterangan di luar kartu berkontras minimal 4,5 : 1 pada s
     });
   });
 });
-uji('latar: siluet satu warna (currentColor) dan tersembunyi dari pembaca layar', () => {
+uji('latar: siluet kota satu warna (currentColor), tanpa pohon sawit agar berbeda dari kartu keputusan, tersembunyi dari pembaca layar', () => {
   const s = latar();
   assert.ok(s.startsWith('<svg') && s.includes('aria-hidden="true"'));
   assert.ok(!/#[0-9A-Fa-f]{3,6}\b/.test(s));
+  assert.ok(!s.includes('class="dn"'));
   assert.ok(!/NaN|undefined/.test(s));
+});
+
+console.log('Animasi kartu keputusan');
+const [gerakAngin] = ambil('gerakAngin');
+uji('gerakAngin: arah gerak dari arah asal angin, kencang goyangan naik dengan kecepatan dan dibatasi', () => {
+  samaJSON(gerakAngin(null), { ar: 1, awan: 110, amp: 1.6 });
+  assert.strictEqual(gerakAngin({ spd: 10, dir: 90 }).ar, -1);    // dari timur -> bergerak ke barat (kiri)
+  assert.strictEqual(gerakAngin({ spd: 10, dir: 270 }).ar, 1);    // dari barat -> ke timur (kanan)
+  assert.strictEqual(gerakAngin({ spd: 10, dir: 135 }).ar, -1);   // dari tenggara -> ke barat laut
+  assert.strictEqual(gerakAngin({ spd: 10, dir: 0 }).ar, 1);      // dari utara: tanpa komponen timur-barat, bawaan ke kanan
+  assert.ok(gerakAngin({ spd: 30, dir: 90 }).amp > gerakAngin({ spd: 6, dir: 90 }).amp);
+  assert.strictEqual(gerakAngin({ spd: 200, dir: 90 }).amp, 4);
+  assert.strictEqual(gerakAngin({ spd: 200, dir: 90 }).awan, 45);
+});
+uji('adegan: awan dan burung hanya saat udara baik/sedang; asap dan debu bertambah saat udara memburuk; 8 sawit dekat bergoyang', () => {
+  const n = (s, c) => (s.match(new RegExp('class="' + c + '"', 'g')) || []).length;
+  const harap = [[4, 4, 0, 0], [4, 4, 0, 0], [0, 0, 2, 8], [0, 0, 3, 12], [0, 0, 4, 16], [0, 0, 5, 20]];
+  KATEGORI.forEach((c, k) => {
+    const s = adegan(k, { spd: 12, dir: 90 });
+    samaJSON([n(s, 'awn'), n(s, 'brg'), n(s, 'asap'), n(s, 'db')], harap[k]);
+    assert.ok(s.includes('--ar:-1') && s.includes('aria-hidden="true"'));
+    assert.strictEqual((s.split('<g class="dekat"')[1].match(/class="dn"/g) || []).length, 8);
+    assert.ok(!/NaN|undefined/.test(s), c.s);
+  });
+  assert.ok(adegan(0).includes('--ar:1'));   // tanpa data angin
 });

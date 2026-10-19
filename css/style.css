@@ -161,6 +161,17 @@ a { color: inherit; }
 .lcn { display: inline-block; padding: 5px 14px; border-radius: 99px; font: 700 .95rem/1.2 var(--font); border: 1.5px solid rgba(255, 255, 255, .85); }
 .trend { margin: 0; max-width: 52ch; font-size: .98rem; }
 .scene { display: block; width: 100%; height: 170px; flex-shrink: 0; margin-top: auto; }
+/* bagian adegan yang bergerak (animasinya di bagian 15); tanpa gerak tampil diam pada posisi dasarnya:
+   pelepah sawit (.dn), awan (.awn), burung (.brg/.spy), kepulan asap (.kp), debu halus (.db) */
+.scene .dn { transform-box: view-box; }
+.scene .awn { fill: #FFFFFF; opacity: .6; }
+.scene .spy { fill: none; stroke: #14202B; stroke-width: 1.8; stroke-linecap: round; transform-box: fill-box; transform-origin: center; }
+.scene .kp { transform-box: fill-box; transform-origin: center; }
+.scene .kp:nth-child(1) { transform: translate(0, -10px) scale(.6); opacity: .9; }
+.scene .kp:nth-child(2) { transform: translate(calc(var(--ar, 1) * 12px), -34px) scale(1); opacity: .75; }
+.scene .kp:nth-child(3) { transform: translate(calc(var(--ar, 1) * 26px), -62px) scale(1.4); opacity: .55; }
+.scene .kp:nth-child(4) { transform: translate(calc(var(--ar, 1) * 40px), -90px) scale(1.8); opacity: .35; }
+.scene .db { fill: #FFE9D6; opacity: .45; }
 .sky.load { --z: #31475A; --m: #42586B; --h: #7C93A5; min-height: 330px; }
 .sky-gap { height: 150px; margin-top: auto; }
 .sk1, .sk2 { height: 30px; border-radius: 10px; background: rgba(255, 255, 255, .2); }
@@ -503,6 +514,24 @@ a { color: inherit; }
   :root { transition: --la1 1.2s, --la2 1.2s, --la3 1.2s, --lg1 1.2s, --lg2 1.2s, --lg3 1.2s; }
   .scene .glow { animation: glow 7s ease-in-out infinite; }
   .scene .haze { animation: drift 45s ease-in-out infinite alternate; }
+  /* kartu keputusan: pelepah bergoyang, awan dan burung melintas, asap mengepul, debu melayang;
+     arah (--ar) dan kencang goyangan (--amp) mengikuti angin (svg.js -> gerakAngin) */
+  .scene .dekat .dn, .scene .jauh .dn { animation: goyang 4s ease-in-out infinite alternate; }
+  .scene .awn { animation: lintas 110s linear infinite; }
+  .scene .brg { animation: lintas 34s linear infinite; animation-delay: -17s; }
+  .scene .spy { animation: kepak .42s ease-in-out infinite alternate; }
+  .scene .kp { animation: kepul 9s linear infinite; animation-delay: var(--pd, 0s); }
+  .scene .kp:nth-child(2) { animation-delay: calc(var(--pd, 0s) - 2.25s); }
+  .scene .kp:nth-child(3) { animation-delay: calc(var(--pd, 0s) - 4.5s); }
+  .scene .kp:nth-child(4) { animation-delay: calc(var(--pd, 0s) - 6.75s); }
+  .scene .db { animation: melayang 8s ease-in-out infinite; }
+  /* kartu keputusan di luar layar: animasinya dijeda agar hemat baterai (.jeda dari app.js) */
+  .sky.jeda .scene * { animation-play-state: paused; }
+  @keyframes goyang { from { transform: rotate(calc(var(--ar, 1) * var(--amp, 1.6) * -1.4deg)); } to { transform: rotate(calc(var(--ar, 1) * var(--amp, 1.6) * 2.6deg)); } }
+  @keyframes lintas { from { transform: translateX(calc(var(--ar, 1) * -1400px)); } to { transform: translateX(calc(var(--ar, 1) * 1400px)); } }
+  @keyframes kepak { from { transform: scaleY(1); } to { transform: scaleY(.3); } }
+  @keyframes kepul { 0% { transform: translate(0, 0) scale(.35); opacity: 0; } 12% { opacity: .95; } 100% { transform: translate(calc(var(--ar, 1) * 52px), -110px) scale(2.1); opacity: 0; } }
+  @keyframes melayang { 0%, 100% { transform: translate(0, 0); opacity: .15; } 50% { transform: translate(calc(var(--ar, 1) * 18px), -10px); opacity: .6; } }
   .stat.live i { animation: ping 2.4s ease-out infinite; }
   .sk1, .sk2, .sk3 { animation: shimmer 1.6s ease-in-out infinite; }
   .toast { transition: opacity .25s; }

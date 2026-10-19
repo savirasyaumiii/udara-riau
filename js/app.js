@@ -61,6 +61,8 @@
   const petaGagal = {};
   /* anim = benar bila tampilan berikutnya perlu animasi masuk (ganti halaman atau data baru tiba) */
   let anim = true;
+  /* Animasi adegan kartu keputusan dijeda (kelas .jeda) selama kartunya di luar layar, agar hemat baterai */
+  const ioSky = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('jeda', !e.isIntersecting))) : null;
 
   /* ---------- util ---------- */
   const kat = a => KATEGORI[kategoriIdx(a)];
@@ -416,6 +418,8 @@
   }
 
   /* ---------- halaman 1: Hari ini ---------- */
+  /* Angin untuk animasi kartu keputusan: angin BMKG yang tertulis di kartu, atau angin model bila belum ada */
+  const anginAdegan = (i, d) => { const x = mode === 'sim' ? null : cuaca(i); return x && x.ws != null && x.wd != null ? { spd: x.ws, dir: x.wd } : d.wind; };
   function viewHari() {
     const i = S.city, d = D[i];
     if (mode === 'loading') return skeleton(i);
@@ -427,7 +431,7 @@
       '<h2 class="verdict" id="hv">' + r.kalimat + '</h2>' +
       '<div class="aq"><b>' + d.aqi + '</b><span class="aqt"><small>US AQI</small>' + lencana(c) + '</span>' + skalaAQI(d.aqi) + '</div>' +
       '<p class="trend">' + trendText(trend(H)) + (w.ik ? ' Titik data: ' + esc(w.ik) + '.' : '') + (r.diperketat ? ' Saran diperketat untuk kelompok: ' + esc(p.label) + '.' : '') + '</p>' +
-      wxHero(i) + '</div>' + adegan(r.i) + '</section>';
+      wxHero(i) + '</div>' + adegan(r.i, anginAdegan(i, d)) + '</section>';
 
     const kel = '<section class="card"><h2 id="pfl">Kelompok pengguna</h2>' +
       '<div class="chips" role="group" aria-labelledby="pfl">' + PROFIL.map(x => '<button class="chip" data-p="' + x.kode + '" aria-pressed="' + (x.kode === S.pf) + '">' + x.label + '</button>').join('') + '</div></section>';
@@ -791,6 +795,7 @@
     v.innerHTML = S.tab === 'hari' ? viewHari() : S.tab === 'cuaca' ? viewCuaca() : S.tab === 'riau' ? viewRiau() : S.tab === 'rencana' ? viewRencana() : viewCatatan();
     if (galX) { const g = document.querySelector('.galeri'); if (g) g.scrollLeft = galX; }
     if (S.tab === 'cuaca') amatiGaleri();
+    if (ioSky) { ioSky.disconnect(); const sk = document.querySelector('.sky'); if (sk) ioSky.observe(sk); }
     if (sel) { const n = document.querySelector(sel); if (n && n !== document.activeElement) n.focus({ preventScroll: true }); }
     if (S.tab === 'cuaca') setTimeout(pastikanCuaca, 0);
   }

@@ -2,7 +2,7 @@
 
 Panduan harian kualitas udara dan kabut asap untuk 12 kabupaten/kota di Provinsi Riau. Web statis (HTML, CSS, JavaScript tanpa kerangka kerja, tanpa server, tanpa basis data) yang dibuat sebagai proyek Kerja Praktik Teknik Informatika UIR dengan pendekatan *Design Thinking*. Nama sebelumnya *Udara Riau*; folder proyek dan repositori GitHub tetap bernama `udara-riau`. Judul proyek: *Perancangan Pengalaman Pengguna Web Panduan Kualitas Udara dan Kabut Asap 12 Kabupaten/Kota di Provinsi Riau untuk Mendukung Aktivitas Kerja Pegawai dengan Metode Design Thinking (Studi Kasus: Pegawai Kantor Cabang Bank di Pekanbaru)*. Aspek studi kasus pegawai ada pada kelompok pengguna **Pegawai kantor** dan kegiatan **Berangkat atau pulang kerja** serta **Kunjungan nasabah atau kerja di luar kantor** pada halaman Rencana.
 
-Latar halaman berupa langit yang warnanya mengikuti kategori udara wilayah terpilih (biru cerah saat baik, kuning berkabut, sampai jingga kecokelatan saat berasap), dengan siluet pemandangan Riau yang makin tertutup kabut bila udara memburuk.
+Latar halaman berupa langit yang warnanya mengikuti kategori udara wilayah terpilih (biru cerah saat baik, kuning berkabut, sampai jingga kecokelatan saat berasap), dengan siluet kota Pekanbaru (masjid, gedung, jembatan, rumah Melayu) yang makin tertutup kabut bila udara memburuk. Kartu keputusan di halaman Hari ini bergambar kebun sawit yang bergerak: pelepah bergoyang tertiup angin, awan dan burung saat udara baik atau sedang, serta kepulan asap dan debu halus yang makin banyak saat udara memburuk; arah dan kencangnya mengikuti angin BMKG wilayah terpilih.
 
 Lima halaman:
 
@@ -31,7 +31,7 @@ udara-riau/
 │   │                   satelit, hari tanpa hujan, hujan dibanding normal, bulan relatif kering
 │   ├── api.js          permintaan ke Open-Meteo (cache 15 menit, cadangan maks. 3 jam; harian 3 jam), BMKG (cache 1 jam,
 │   │                   cadangan maks. 12 jam), WAQI (15 menit), NASA GIBS (1 jam), dan NASA POWER (12 jam)
-│   ├── svg.js          ikon, langit, siluet latar halaman, grafik, garis waktu, peta, kompas, grafik cuaca dan iklim (semuanya SVG)
+│   ├── svg.js          ikon, adegan bergerak kartu keputusan, siluet kota latar halaman, grafik, garis waktu, peta, kompas, grafik cuaca dan iklim (semuanya SVG)
 │   └── app.js          keadaan aplikasi, tampilan lima halaman, interaksi
 ├── tests/logic.test.js uji otomatis fungsi logika (Node.js, tanpa pustaka tambahan)
 ├── tools/buat-iklim.js pembuat js/iklim.js dari NASA POWER (cukup dijalankan sekali)
@@ -72,7 +72,7 @@ Butuh [Node.js](https://nodejs.org/) versi 16 atau lebih baru. Di terminal VS Co
 node tests/logic.test.js
 ```
 
-Semua baris harus berstatus `ok` dan baris terakhir menyatakan `80 uji lulus`. Uji mencakup data referensi, batas kategori, saran per kelompok, tren, jam aman, asap kiriman, pola gejala, pembaca respons API (Open-Meteo, BMKG, WAQI, petak vektor NASA), ISPU, titik panas di arah datangnya angin, normal iklim, hari tanpa hujan, hujan dibanding normal, kontras warna (termasuk teks di atas semua warna langit latar), peta dasar (titik data tiap wilayah harus berada di dalam batas wilayahnya sendiri), dan pembuat SVG termasuk grafik halaman Cuaca. Tampilan di layar tidak diuji oleh berkas ini; pengujian tampilan pada laporan KP memakai Playwright terpisah.
+Semua baris harus berstatus `ok` dan baris terakhir menyatakan `82 uji lulus`. Uji mencakup data referensi, batas kategori, saran per kelompok, tren, jam aman, asap kiriman, pola gejala, pembaca respons API (Open-Meteo, BMKG, WAQI, petak vektor NASA), ISPU, titik panas di arah datangnya angin, normal iklim, hari tanpa hujan, hujan dibanding normal, kontras warna (termasuk teks di atas semua warna langit latar), peta dasar (titik data tiap wilayah harus berada di dalam batas wilayahnya sendiri), dan pembuat SVG termasuk grafik halaman Cuaca. Tampilan di layar tidak diuji oleh berkas ini; pengujian tampilan pada laporan KP memakai Playwright terpisah.
 
 ### Mengaktifkan hasil ukur stasiun (token WAQI)
 
@@ -180,7 +180,8 @@ Font **Atkinson Hyperlegible** dan **Bricolage Grotesque** dimuat dari Google Fo
 | Teks saran per kategori, kelompok pengguna, kegiatan, daftar kesiapan | `js/data.js` (`SARAN`, `PROFIL`, `KEGIATAN`, `KESIAPAN`) |
 | Warna kategori, langit, kalimat keputusan | `js/data.js` → `KATEGORI` |
 | Warna langit latar halaman | `js/data.js` → `KATEGORI` (`lt` tema terang, `lg` tema gelap) dan `LATAR_NETRAL` (saat memuat atau gagal); uji kontras menolak warna yang membuat judul web sulit dibaca |
-| Siluet latar (sawit, jembatan, rumah Melayu) | `js/svg.js` → `latar`; warna dan tebal kabut di `css/style.css` → `.latar`, `--sil`, `--silo` |
+| Siluet latar (masjid, gedung, jembatan, ruko, rumah Melayu) | `js/svg.js` → `latar`; warna dan tebal kabut di `css/style.css` → `.latar`, `--sil`, `--silo` |
+| Animasi kartu keputusan (awan, burung, asap, debu, goyangan sawit) | jumlah dan letaknya di `js/svg.js` → `adegan`, arah dan kencangnya dari angin di `gerakAngin`; gerakannya di `css/style.css` bagian 15 (`goyang`, `lintas`, `kepak`, `kepul`, `melayang`) |
 | Warna peta (laut, daratan, sungai, kepekatan warna wilayah) | `css/style.css` → `--laut`, `--darat`, `--sungai`, `--wo` |
 | Batas wilayah dan sungai pada peta | jalankan ulang `node tools/buat-peta.js` (jangan ubah `js/petadasar.js` manual) |
 | Menambah atau mengganti wilayah | `js/data.js` → `WILAYAH` (tambahkan juga satu angka di `SIM_FAKTOR`) |
@@ -209,6 +210,7 @@ Setelah mengubah `data.js` atau `logic.js`, jalankan lagi `node tests/logic.test
 - Informasi tidak bergantung pada warna semata: kategori selalu ditampilkan bersama nama dan angka; jam aman dibedakan oleh tinggi batang dan pola.
 - Bidang wilayah pada peta bisa disentuh untuk memilih wilayah (target lebih besar dari lingkaran), tetapi tersembunyi dari pembaca layar; pilihan lewat keyboard dan pembaca layar tetap memakai lingkaran, peringkat, atau pemilih wilayah.
 - Langit dan siluet latar adalah hiasan (`aria-hidden`, tidak menghalangi sentuhan), tidak dicetak, dan disembunyikan pada mode kontras tinggi Windows. Warna langit berganti perlahan kecuali perangkat meminta gerakan dikurangi.
+- Animasi kartu keputusan hanya berjalan bila perangkat tidak meminta gerakan dikurangi (*prefers-reduced-motion*); bila diminta, gambarnya tetap utuh tetapi diam. Animasi dijeda saat kartu tidak terlihat di layar agar hemat baterai, dan tidak menyentuh area teks kartu. Diukur sekitar 53–56 frame per detik di peramban uji dengan prosesor diperlambat 4 kali.
 - Segitiga titik panas dan kotak stasiun pada peta adalah hiasan (`aria-hidden`); jumlah, jarak, dan arahnya disampaikan sebagai teks pada kartu Titik panas satelit dan Hasil ukur stasiun.
 - Teks dasar 200% pada lebar 320 piksel diuji tanpa gulir mendatar (Chromium). Belum diuji pada perangkat ponsel nyata dan pembaca layar.
 
