@@ -10,7 +10,7 @@ const assert = require('assert');
    Berkas yang belum dibuat dilewati, jadi uji ini sudah bisa dijalankan sejak tahap awal.
    TextDecoder (dipakai bacaMVT) bukan bawaan konteks vm, jadi diteruskan dari Node. */
 const ctx = vm.createContext({ TextDecoder });
-['data.js', 'iklim.js', 'logic.js', 'svg.js'].forEach(f => {
+['data.js', 'iklim.js', 'petadasar.js', 'logic.js', 'svg.js'].forEach(f => {
   const p = path.join(__dirname, '..', 'js', f);
   if (fs.existsSync(p)) vm.runInContext(fs.readFileSync(p, 'utf8'), ctx);
 });
@@ -322,7 +322,8 @@ console.log('Pembuat SVG: peta dan kompas');
 uji('peta: 12 gelembung, tanda dipilih, panah hanya bila ada sumber', () => {
   const Dm = WILAYAH.map((w, i) => ({ aqi: 40 + i * 10 }));
   const s = peta(Dm, 2, null, 340);
-  assert.strictEqual((s.match(/data-c="/g) || []).length, 12);
+  assert.strictEqual((s.match(/<g data-c="/g) || []).length, 12);
+  assert.strictEqual((s.match(/class="wl" data-c="/g) || []).length, 12);
   assert.ok(s.includes(', dipilih'));
   assert.ok(!s.includes('marker-end'));
   assert.ok(peta(Dm, 0, { j: 1, km: 50, gap: 80 }, 340).includes('marker-end'));
@@ -627,8 +628,8 @@ uji('peta: titik panas dan stasiun digambar di bawah gelembung tanpa menambah to
   const s = peta(Dm, 0, null, 340, 1, { api: [{ la: 0.6, lo: 101.0 }, { la: 0.2, lo: 102.0 }, { la: 5, lo: 110 }], st: [{ la: 0.46, lo: 101.46 }] });
   assert.strictEqual((s.match(/class="ap"/g) || []).length, 2);   // yang di luar bingkai tidak digambar
   assert.strictEqual((s.match(/class="stu"/g) || []).length, 1);
-  assert.strictEqual((s.match(/data-c="/g) || []).length, 12);
-  assert.ok(s.indexOf('class="ap"') < s.indexOf('data-c="'));
+  assert.strictEqual((s.match(/<g data-c="/g) || []).length, 12);
+  assert.ok(s.indexOf('class="ap"') < s.indexOf('<g data-c="'));
   assert.ok(!/NaN|undefined/.test(s));
   assert.ok(!/class="(ap|stu)"/.test(peta(Dm, 0, null, 340, 1, null)));
 });
@@ -729,4 +730,67 @@ uji('grafik halaman Cuaca: panel terpisah (tanpa dua sumbu), jumlah tanda sesuai
   assert.strictEqual((s4.match(/class="wk"/g) || []).length, 4);
   assert.ok(GRAFIK.u4.noLine && GRAFIK.u4.py(3) === null && GRAFIK.u4.tip(6).includes('relatif kering'));
   [s1, s2, s3, s4].forEach(s => assert.ok(!/NaN|undefined|Infinity/.test(s)));
+});
+
+console.log('Peta dasar dan latar halaman');
+const [PETA_DASAR, LATAR_NETRAL, latar] = ambil('PETA_DASAR', 'LATAR_NETRAL', 'latar');
+/* Path ringkas PETA_DASAR (M x y, lalu l dx dy relatif, z) diubah kembali menjadi cincin titik */
+const cincinPath = d => d.split('M').filter(Boolean).map(seg => {
+  const [awal, rel = ''] = seg.replace(/z$/, '').split('l');
+  const a = awal.trim().split(/\s+/).map(Number), n = (rel.match(/-?\d+/g) || []).map(Number), r = [[a[0], a[1]]];
+  for (let i = 0; i < n.length; i += 2) r.push([r[r.length - 1][0] + n[i], r[r.length - 1][1] + n[i + 1]]);
+  return r;
+});
+const diDalam = (rs, x, y) => rs.reduce((c, r) => {
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) if ((r[i][1] > y) !== (r[j][1] > y) && x < (r[j][0] - r[i][0]) * (y - r[i][1]) / (r[j][1] - r[i][1]) + r[i][0]) c = !c;
+  return c;
+}, false);
+/* jarak titik ke tepi terdekat (satuan peta) */
+const jarakTepi = (rs, x, y) => Math.min(...rs.map(r => Math.min(...r.map((p, i) => {
+  const q = r[(i + 1) % r.length], dx = q[0] - p[0], dy = q[1] - p[1];
+  const t = Math.max(0, Math.min(1, ((x - p[0]) * dx + (y - p[1]) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(p[0] + t * dx - x, p[1] + t * dy - y);
+}))));
+uji('peta dasar: 12 batas wilayah; titik data tiap wilayah di dalam batasnya (atau di pesisirnya, <= 1 km), tidak di wilayah lain', () => {
+  assert.strictEqual(PETA_DASAR.wil.length, 12);
+  const B = PETA_DASAR.wil.map(cincinPath), km = 111.32 / PETA_DASAR.u;
+  WILAYAH.forEach((w, i) => {
+    const x = (w.lo - PETA_DASAR.lon0) * PETA_DASAR.u, y = (PETA_DASAR.lat0 - w.la) * PETA_DASAR.u;
+    assert.ok(diDalam(B[i], x, y) || jarakTepi(B[i], x, y) * km <= 1, w.s + ' berada di luar batasnya (' + (jarakTepi(B[i], x, y) * km).toFixed(2) + ' km)');
+    B.forEach((b, j) => { if (j !== i) assert.ok(!diDalam(b, x, y), w.s + ' masuk batas ' + WILAYAH[j].s); });
+  });
+});
+uji('peta dasar: ringan (< 40 KB), hanya bilangan bulat; wilayah diwarnai menurut kategori dan tergambar di bawah gelembung', () => {
+  const isi = fs.readFileSync(path.join(__dirname, '..', 'js', 'petadasar.js'), 'utf8');
+  assert.ok(isi.length < 40 * 1024, (isi.length / 1024).toFixed(1) + ' KB');
+  PETA_DASAR.wil.concat([PETA_DASAR.darat, PETA_DASAR.danau, PETA_DASAR.sungai]).forEach(d => assert.ok(/^[Mlz0-9 -]+$/.test(d) && d.length > 0));
+  const Dm = WILAYAH.map((w, i) => ({ aqi: 30 + i * 30 })); Dm[4] = null;
+  const s = peta(Dm, 0, null, 340);
+  const wl = [...s.matchAll(/<path class="wl" data-c="(\d+)" d="[^"]*" fill="([^"]+)"/g)];
+  assert.strictEqual(wl.length, 12);
+  wl.forEach(m => assert.strictEqual(m[2], Dm[+m[1]] ? KATEGORI[kategoriIdx(Dm[+m[1]].aqi)].c1 : 'transparent', WILAYAH[+m[1]].s));
+  assert.ok(s.includes('translate(14.00 14.00)'));   // pojok PETA_DASAR = pojok bingkai peta() (bujur 99,7, lintang 2,6)
+  assert.ok(s.includes('class="wl-on" d="' + PETA_DASAR.wil[0] + '"'));
+  assert.strictEqual((s.match(/<g data-c="/g) || []).length, 12);
+  assert.ok(s.lastIndexOf('class="wl"') < s.indexOf('<g data-c="'));
+  assert.ok(!/NaN|undefined/.test(s));
+});
+uji('latar: judul dan keterangan di luar kartu berkontras minimal 4,5 : 1 pada semua warna langit (terang dan gelap)', () => {
+  const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'style.css'), 'utf8');
+  const blok = sel => { const a = css.indexOf(sel + ' {'); return css.slice(a, css.indexOf('}', a)); };
+  const terang = blok(':root'), gelap = blok(':root[data-theme="dark"]');
+  const tok = (b, n) => b.match(new RegExp('--' + n + ':[ ]*(#[0-9A-Fa-f]{6})'))[1];
+  KATEGORI.concat([LATAR_NETRAL]).forEach(k => {
+    assert.ok(k.lt.length === 3 && k.lg.length === 3, (k.s || 'netral') + ': tiga warna langit');
+    ['ink', 'mute'].forEach(t => {
+      k.lt.forEach(c => assert.ok(kontras(tok(terang, t), c) >= 4.5, (k.s || 'netral') + ' terang ' + t + ' di ' + c + ': ' + kontras(tok(terang, t), c).toFixed(2)));
+      k.lg.forEach(c => assert.ok(kontras(tok(gelap, t), c) >= 4.5, (k.s || 'netral') + ' gelap ' + t + ' di ' + c + ': ' + kontras(tok(gelap, t), c).toFixed(2)));
+    });
+  });
+});
+uji('latar: siluet satu warna (currentColor) dan tersembunyi dari pembaca layar', () => {
+  const s = latar();
+  assert.ok(s.startsWith('<svg') && s.includes('aria-hidden="true"'));
+  assert.ok(!/#[0-9A-Fa-f]{3,6}\b/.test(s));
+  assert.ok(!/NaN|undefined/.test(s));
 });

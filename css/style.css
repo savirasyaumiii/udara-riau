@@ -7,7 +7,7 @@
            14 layar lebar  15 gerak
    Warna dasar antarmuka netral dengan satu aksen (biru laut, --acc). Warna yang
    "berbicara" tetap warna kategori AQI (js/data.js): langit kartu keputusan,
-   lencana, dan --cat (diisi app.js) yang mewarnai latar halaman secara halus.
+   lencana, --cat (diisi app.js) untuk aksen kecil, dan langit latar halaman (.latar).
    Semua warna lewat token agar tema terang dan gelap konsisten.
    ========================================================================== */
 
@@ -18,6 +18,10 @@
   --okbg: #DDF1E5; --okfg: #0F5A31; --wtbg: #FFF1C9; --wtfg: #6B4F00; --nobg: #FBE0E0; --nofg: #9B1F1F;
   --acc: #0B6E8A; --acc-ink: #FFFFFF; --accs: #E0F0F5; --warm: #E8743B; --smoke: #B07A4A; --api: #D4400F;
   --hujan: #2A78D6; --suhu: #EB6834;   /* warna data grafik Cuaca (lolos pemeriksa palet: buta warna, kontras 3:1) */
+  --laut: #CFE2EC; --darat: #F3F0E6; --sungai: #4F93BD; --wo: .42;   /* peta Se-Riau: laut, daratan, sungai, kepekatan warna wilayah */
+  /* langit latar halaman: --la* (terang) dan --lg* (gelap) diisi app.js dari KATEGORI.lt/lg; --l* yang dipakai */
+  --la1: #E3EAEF; --la2: #EEF3F6; --la3: #F1F4F5; --lg1: #0A1117; --lg2: #0B1218; --lg3: #0D141A;
+  --l1: var(--la1); --l2: var(--la2); --l3: var(--la3); --lsun: transparent; --lhz: 0; --sil: #13232E; --silo: .12; --suno: 32%;
   --sh: 0 1px 2px rgba(19, 35, 46, .06), 0 12px 32px -16px rgba(19, 35, 46, .24);
   --cat: #5E7180;
   --disp: 'Bricolage Grotesque', 'Atkinson Hyperlegible', system-ui, sans-serif;
@@ -30,6 +34,8 @@
     --okbg: #123524; --okfg: #7FE0B8; --wtbg: #3A2E0A; --wtfg: #F2D27A; --nobg: #3E1717; --nofg: #FF9C9C;
     --acc: #5CC6E0; --acc-ink: #06222B; --accs: #123440; --warm: #F29A62; --smoke: #D3A274; --api: #FF7442;
   --hujan: #3987E5; --suhu: #D95926;
+    --laut: #0D2231; --darat: #1B252D; --sungai: #3A7EA8; --wo: .58;
+    --l1: var(--lg1); --l2: var(--lg2); --l3: var(--lg3); --sil: #000000; --silo: .5; --suno: 16%;
     --sh: 0 1px 2px rgba(0, 0, 0, .4), 0 14px 34px -16px rgba(0, 0, 0, .7);
     color-scheme: dark;
   }
@@ -40,6 +46,8 @@
   --okbg: #123524; --okfg: #7FE0B8; --wtbg: #3A2E0A; --wtfg: #F2D27A; --nobg: #3E1717; --nofg: #FF9C9C;
   --acc: #5CC6E0; --acc-ink: #06222B; --accs: #123440; --warm: #F29A62; --smoke: #D3A274; --api: #FF7442;
   --hujan: #3987E5; --suhu: #D95926;
+  --laut: #0D2231; --darat: #1B252D; --sungai: #3A7EA8; --wo: .58;
+  --l1: var(--lg1); --l2: var(--lg2); --l3: var(--lg3); --sil: #000000; --silo: .5; --suno: 16%;
   --sh: 0 1px 2px rgba(0, 0, 0, .4), 0 14px 34px -16px rgba(0, 0, 0, .7);
   color-scheme: dark;
 }
@@ -48,13 +56,27 @@
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-padding-top: 84px; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 1rem; line-height: 1.55; }
-/* Latar bergradasi halus: warna kategori di kiri atas, aksen di kanan atas.
-   Peramban tanpa color-mix() tetap memakai latar polos di atas. */
+/* Latar halaman: langit yang warnanya mengikuti kategori AQI wilayah terpilih (biru cerah saat baik,
+   kuning berkabut, lalu jingga kecokelatan saat berasap), matahari samar, dan siluet pemandangan Riau
+   (svg.js -> latar()) yang makin tertutup kabut bila udara memburuk (--lhz = KATEGORI.haze).
+   Diletakkan tetap di belakang semua isi; body tetap berlatar --bg sebagai cadangan. */
+@property --la1 { syntax: '<color>'; inherits: true; initial-value: #E3EAEF; }
+@property --la2 { syntax: '<color>'; inherits: true; initial-value: #EEF3F6; }
+@property --la3 { syntax: '<color>'; inherits: true; initial-value: #F1F4F5; }
+@property --lg1 { syntax: '<color>'; inherits: true; initial-value: #0A1117; }
+@property --lg2 { syntax: '<color>'; inherits: true; initial-value: #0B1218; }
+@property --lg3 { syntax: '<color>'; inherits: true; initial-value: #0D141A; }
+.latar { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
+  background: linear-gradient(180deg, var(--l1) 0%, var(--l2) 52%, var(--l3) 100%); }
 @supports (background: color-mix(in srgb, red 10%, white)) {
-  body { background: radial-gradient(1000px 520px at -10% -8%, color-mix(in srgb, var(--cat) 24%, transparent), transparent 70%) no-repeat,
-                     radial-gradient(800px 460px at 110% -6%, color-mix(in srgb, var(--acc) 16%, transparent), transparent 70%) no-repeat,
-                     var(--bg); }
+  .latar { background: radial-gradient(circle at 84% 10%, color-mix(in srgb, var(--lsun) var(--suno), transparent) 0, transparent 30vmax),
+                       linear-gradient(180deg, var(--l1) 0%, var(--l2) 52%, var(--l3) 100%); }
 }
+.latar svg { position: absolute; left: 0; bottom: 0; width: 100%; height: clamp(120px, 26vh, 260px); color: var(--sil); opacity: var(--silo); }
+.latar .lj { opacity: .5; }
+.latar::after { content: ''; position: absolute; inset: auto 0 0; height: clamp(170px, 36vh, 340px); background: linear-gradient(transparent, var(--l3) 80%); opacity: var(--lhz); }
+@media print { .latar { display: none; } }
+@media (forced-colors: active) { .latar { display: none; } }
 button, select, textarea, input { font-family: inherit; }
 button { color: inherit; }
 button, select, summary, .chip, .bub { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
@@ -108,9 +130,11 @@ a { color: inherit; }
    dan bilah alat peramban ponsel dapat menutupinya. Pada layar pendek (ponsel landscape)
    menu ikut menggulir agar isi tidak kehabisan ruang. */
 .tabs { position: sticky; top: 0; z-index: 20; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px;
-  margin: 0 calc(-1 * var(--gr)) 14px calc(-1 * var(--gl)); padding: 8px var(--gr) 8px var(--gl); background: var(--bg); }
+  margin: 0 calc(-1 * var(--gr)) 14px calc(-1 * var(--gl)); padding: 8px var(--gr) 8px var(--gl); }
+/* transparan di atas langit; berlatar (kaca buram bila didukung) saat menempel di atas layar (.lekat dari app.js) */
+.tabs.lekat { background: var(--l1); }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .tabs { background: color-mix(in srgb, var(--bg) 78%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); }
+  .tabs.lekat { background: color-mix(in srgb, var(--l1) 72%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); }
 }
 .tabs button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 54px; min-width: 0;
   border: 1px solid var(--ln); background: var(--sf); color: var(--ink); border-radius: 14px; cursor: pointer; padding: 4px 2px;
@@ -229,7 +253,14 @@ a { color: inherit; }
 /* ---------- 8. peta dan kompas ---------- */
 
 .peta { display: block; max-width: 100%; height: auto; }
-.peta .halo { stroke: var(--sk); }
+.peta .halo { stroke: var(--sf); }
+/* peta dasar: laut, daratan, wilayah berwarna kategori (tipis, agar gelembung tetap menonjol), danau, sungai */
+.peta .laut, .peta .dnu { fill: var(--laut); }
+.peta .drt { fill: var(--darat); stroke: var(--darat); stroke-width: .6; vector-effect: non-scaling-stroke; }
+.peta .wl { fill-opacity: var(--wo); stroke: var(--sf); stroke-width: 1; stroke-linejoin: round; vector-effect: non-scaling-stroke; cursor: pointer; transition: fill-opacity .15s; }
+.peta .wl:hover { fill-opacity: calc(var(--wo) + .2); }
+.peta .wl-on { fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+.peta .sgi { fill: none; stroke: var(--sungai); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
 .bub { cursor: pointer; }
 .bub:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .bn { font: 800 .78rem var(--font); }
@@ -376,8 +407,8 @@ a { color: inherit; }
 .uk .lcn { border-color: transparent; }
 .ukur .vdc, .a-api .vdc { margin: 12px 0 0; }
 .a-api .tiles { margin-bottom: 12px; }
-.ap { fill: var(--api); stroke: var(--sk); stroke-width: .9; stroke-linejoin: round; }
-.stu { fill: var(--ink); stroke: var(--sk); stroke-width: 1.2; }
+.ap { fill: var(--api); stroke: var(--sf); stroke-width: .9; stroke-linejoin: round; }
+.stu { fill: var(--ink); stroke: var(--sf); stroke-width: 1.2; }
 .lg.key i.kap { width: 12px; height: 11px; border-radius: 0; background: var(--api); clip-path: polygon(50% 0, 100% 100%, 0 100%); box-shadow: none; }
 .lg.key i.kst { width: 9px; height: 9px; border-radius: 1px; background: var(--ink); box-shadow: none; }
 
@@ -469,6 +500,7 @@ a { color: inherit; }
 
 /* ---------- 15. gerak (dimatikan bila perangkat meminta gerakan dikurangi) ---------- */
 @media (prefers-reduced-motion: no-preference) {
+  :root { transition: --la1 1.2s, --la2 1.2s, --la3 1.2s, --lg1 1.2s, --lg2 1.2s, --lg3 1.2s; }
   .scene .glow { animation: glow 7s ease-in-out infinite; }
   .scene .haze { animation: drift 45s ease-in-out infinite alternate; }
   .stat.live i { animation: ping 2.4s ease-out infinite; }

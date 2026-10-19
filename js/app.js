@@ -51,9 +51,11 @@
   let HR = [], hmode = 'idle', hAt = 0, hBusy = false;
   const PW = {}, pBusy = {}, pGagal = {};
   /* Galeri peta BMKG: satMuat = benar setelah pengguna mengetuk "Muat animasi satelit";
-     petaDimuat = indeks peta yang sudah pernah terlihat (langsung dimuat lagi saat halaman digambar ulang) */
+     petaDimuat = indeks peta yang sudah selesai diunduh (langsung dipasang lagi dari cache saat halaman digambar ulang);
+     pemuat[k] = gambar di luar halaman yang mengunduh peta k. Unduhan tetap berjalan walau galeri digambar ulang
+     (misalnya data baru tiba), jadi satu peta hanya diminta sekali per alamat. */
   let satMuat = false;
-  const petaDimuat = new Set();
+  const petaDimuat = new Set(), pemuat = {};
   /* petaGagal[k] = alamat peta k yang gagal dimuat; tidak dicoba lagi sampai alamatnya berganti (tiap jam),
      agar halaman yang digambar ulang tidak terus meminta gambar yang sedang tidak tersedia */
   const petaGagal = {};
@@ -459,7 +461,7 @@
         ? '<button class="gk-img gagal" data-peta="' + k + '" aria-label="Peta ' + esc(p.judul) + ' belum bisa dimuat"></button>'
         : p.ketuk && !satMuat
         ? '<button class="gk-img gk-muat" data-a="satelit"><span>' + ikon('cloud', 30) + '<b>Muat animasi ' + esc(p.judul.toLowerCase()) + '</b><small>± ' + ukuranPeta(p) + '; tidak dimuat otomatis agar hemat data</small></span></button>'
-        : '<button class="gk-img" data-peta="' + k + '" aria-label="Perbesar peta ' + esc(p.judul) + '"><img class="pbmkg" ' + (p.ketuk || petaDimuat.has(k) ? 'src' : 'data-src') + '="' + urlPeta(p) + '" alt="Peta BMKG: ' + esc(p.judul) + '" decoding="async">' +
+        : '<button class="gk-img" data-peta="' + k + '" aria-label="Perbesar peta ' + esc(p.judul) + '"><img class="pbmkg" ' + (petaDimuat.has(k) ? 'src' : 'data-src') + '="' + urlPeta(p) + '" alt="Peta BMKG: ' + esc(p.judul) + '" decoding="async">' +
           '<span class="gk-zoom" aria-hidden="true">' + ikon('zoom', 18) + '</span></button>';
       return '<li class="gk"><figure>' + gb + '<figcaption><b>' + esc(p.judul) + '</b><span>' + esc(p.ket) + '</span></figcaption></figure></li>';
     }).join('');
@@ -472,10 +474,19 @@
 
   /* Peta baru dimuat saat kartunya hampir terlihat di dalam galeri. loading="lazy" bawaan peramban
      tidak dipakai karena pada galeri yang digeser ke samping peramban memuat semua peta sekaligus
-     (sekitar 2,6 MB). Dipanggil setiap kali halaman Cuaca digambar. */
+     (sekitar 2,6 MB). Dipanggil setiap kali halaman Cuaca digambar. Unduhan lewat pemuat[k]; gambar di
+     halaman yang sedang tampil saat unduhan selesai (bisa jadi elemen baru) yang diberi alamatnya. */
   function amatiGaleri() {
     const g = document.querySelector('.galeri'), belum = g ? [...g.querySelectorAll('img[data-src]')] : [];
-    const muat = i => { i.src = i.dataset.src; i.removeAttribute('data-src'); petaDimuat.add(+i.parentNode.dataset.peta); };
+    const muat = i => {
+      const k = +i.parentNode.dataset.peta, url = i.dataset.src;
+      i.removeAttribute('data-src');
+      if (pemuat[k] && pemuat[k].src === url) return;   // sudah sedang diunduh
+      const im = pemuat[k] = new Image(), kini = () => document.querySelector('.gk-img[data-peta="' + k + '"]');
+      im.onload = () => { petaDimuat.add(k); const b = kini(), x = b && b.querySelector('img.pbmkg'); if (x && !x.getAttribute('src')) x.src = url; };
+      im.onerror = () => { petaGagal[k] = url; const b = kini(); if (b) b.classList.add('gagal'); };
+      im.src = url;
+    };
     if (!belum.length) return;
     if (!('IntersectionObserver' in window)) { belum.forEach(muat); return; }
     const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { muat(e.target); io.unobserve(e.target); } }), { root: g, rootMargin: '0px 30% 0px 30%' });
@@ -658,8 +669,8 @@
         (lap.st.length ? '<li><i class="kst"></i>Stasiun ukur</li>' : '') + '</ul>' : '';
 
     const peta1 = '<section class="card a-peta"><h2>' + ikon('map', 20) + ' Peta 12 kabupaten/kota</h2>' +
-      '<p class="lead">Tiap lingkaran adalah satu wilayah, ditaruh menurut koordinatnya. Sentuh untuk memilih.</p>' + peta(D, i, src, lebar('half'), skalaTeks(), lap) + legenda() + kunciLap +
-      '<p class="note">Lingkaran bergaris tebal: <b>' + esc(w.s) + '</b> (wilayah terpilih). Nama yang tidak muat pada layar sempit tidak ditampilkan; urutan lengkap ada di peringkat. Ini peta posisi titik data, bukan peta batas wilayah.' +
+      '<p class="lead">Tiap wilayah diwarnai menurut kategori AQI-nya. Lingkaran berisi angka AQI di titik data (pusat kota atau ibu kota kabupaten). Sentuh wilayah atau lingkaran untuk memilih.</p>' + peta(D, i, src, lebar('half'), skalaTeks(), lap) + legenda() + kunciLap +
+      '<p class="note">Garis tebal: <b>' + esc(w.s) + '</b> (wilayah terpilih). Nama yang tidak muat pada layar sempit tidak ditampilkan; urutan lengkap ada di peringkat. Warna satu wilayah berasal dari satu titik data, jadi bagian lain wilayah yang luas bisa berbeda. Batas wilayah: BPS (geoBoundaries); sungai: © kontributor OpenStreetMap.' +
       (lap && lap.api.length ? ' Titik panas di luar bingkai peta tidak digambar, tetapi tetap dihitung pada kartu titik panas.' : '') + '</p></section>';
 
     const rank = '<section class="card a-rank"><h2>Peringkat (AQI tertinggi di atas)</h2><div class="rks">' + rows + '</div>' +
@@ -769,6 +780,10 @@
     /* Warna suasana halaman (latar dan aksen) mengikuti kategori wilayah terpilih */
     const dd = mode !== 'loading' && D[S.city];
     document.documentElement.style.setProperty('--cat', dd ? kat(dd.aqi).c1 : '#5E7180');
+    /* Langit latar halaman (KATEGORI.lt/lg; LATAR_NETRAL saat memuat atau gagal) */
+    const L = dd ? kat(dd.aqi) : LATAR_NETRAL, rs = document.documentElement.style;
+    [1, 2, 3].forEach(n => { rs.setProperty('--la' + n, L.lt[n - 1]); rs.setProperty('--lg' + n, L.lg[n - 1]); });
+    rs.setProperty('--lsun', dd ? L.sun : 'transparent'); rs.setProperty('--lhz', dd ? L.haze : 0);
     const v = $('view');
     v.classList.toggle('anim', anim); anim = false;
     /* posisi geser galeri peta dipertahankan saat halaman digambar ulang (mis. data baru tiba) */
@@ -871,6 +886,10 @@
   }
 
   /* ---------- pasang ---------- */
+  $('latar').innerHTML = latar();
+  /* Bilah menu transparan di atas langit; diberi latar saat menempel di atas layar ketika halaman digulir */
+  const lekat = () => { const t = $('tabs'); t.classList.toggle('lekat', window.scrollY > 0 && t.getBoundingClientRect().top <= 1); };
+  window.addEventListener('scroll', lekat, { passive: true });
   $('city').innerHTML = WILAYAH.map((c, i) => '<option value="' + i + '">' + esc(c.n) + (c.ik ? ' (' + esc(c.ik) + ')' : '') + '</option>').join('');
   $('city').value = S.city;
 

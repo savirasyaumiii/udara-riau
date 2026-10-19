@@ -130,6 +130,30 @@ function adegan(k) {
     '</svg>';
 }
 
+/* ---------- latar halaman ----------
+   Siluet pemandangan Riau di dasar layar, di belakang semua kartu: bukit dan pohon sawit
+   di kejauhan, jembatan kabel di atas sungai, dan rumah panggung Melayu dengan selembayung
+   (hiasan bersilang di puncak atap). Satu warna (currentColor); warna langit, matahari, dan
+   kabut diatur CSS (.latar) dari kategori wilayah terpilih. */
+function latar() {
+  const far = [[90, 198, 56, 4, .55], [250, 196, 62, -5, .6], [520, 198, 52, 3, .5], [700, 195, 60, -4, .58], [960, 198, 54, 5, .52], [1560, 196, 60, 4, .58]];
+  const near = [[40, 217, 104, 8, 1], [170, 216, 82, -6, .82], [470, 215, 118, -10, 1.1], [600, 214, 90, 9, .88], [860, 215, 108, 7, 1.02], [1010, 216, 84, -8, .84], [1530, 216, 112, -9, 1.06]];
+  let jb = '<path d="M1060 186H1480" stroke="currentColor" stroke-width="5"/>';
+  [1180, 1360].forEach(x => {
+    jb += '<path d="M' + (x - 5) + ' 204L' + (x - 3) + ' 112H' + (x + 3) + 'L' + (x + 5) + ' 204Z" fill="currentColor"/>';
+    [-110, -80, -50, 50, 80, 110].forEach(d => { jb += '<path d="M' + x + ' 118L' + (x + d) + ' 186" stroke="currentColor" stroke-width="1.4"/>'; });
+  });
+  const rumah = '<path d="M262 216V196h4v20zM292 216V196h4v20zM322 216V196h4v20zM344 216V196h4v20zM248 197h108v-5H248zM256 192V160h92v32zM238 164L302 116L366 164z" fill="currentColor"/>' +
+    '<path d="M302 118Q292 106 284 98M302 118Q312 106 320 98M356 197L372 216" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/>';
+  return '<svg viewBox="0 0 1600 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">' +
+    '<g class="lj"><path d="M0 206Q180 188 380 198T780 192T1180 200T1600 190V240H0Z" fill="currentColor"/>' +
+      far.map(p => sawit(p[0], p[1], p[2], p[3], p[4], 'currentColor')).join('') + jb + '</g>' +
+    '<path d="M0 240V214Q120 208 260 214T560 212T900 215Q1000 212 1080 222V240ZM1460 224Q1530 212 1600 214V240H1460Z" fill="currentColor"/>' +
+    '<path d="M1120 230h60M1220 226h80M1340 233h70M1170 237h50" stroke="currentColor" stroke-width="2" opacity=".5"/>' +
+    rumah + near.map(p => sawit(p[0], p[1], p[2], p[3], p[4], 'currentColor')).join('') +
+    '</svg>';
+}
+
 /* ---------- legenda kategori ---------- */
 function legenda() {
   return '<ul class="lg" aria-label="Arti warna AQI">' + KATEGORI.map(c =>
@@ -203,9 +227,11 @@ function grafik(id, H, o) {
   return '<div class="chartw" data-ch="' + id + '"><svg viewBox="0 0 ' + W + ' ' + Ht + '" width="100%" role="img" aria-label="' + (o.label || 'Grafik AQI per jam').replace(/"/g, '&quot;') + '">' + s + '</svg><div class="tip" hidden></div></div>';
 }
 
-/* ---------- peta gelembung ----------
-   Titik ditempatkan menurut koordinat nyata (garis lintang dan bujur), tanpa batas
-   wilayah. D = data tiap wilayah, sel = indeks terpilih, src = hasil findSource atau null.
+/* ---------- peta wilayah ----------
+   Peta dasar dari js/petadasar.js (laut, daratan sekitar, danau, sungai) dengan batas
+   12 kabupaten/kota yang diwarnai menurut kategori AQI titik datanya. Gelembung angka AQI
+   ditempatkan menurut koordinat titik data. D = data tiap wilayah, sel = indeks terpilih,
+   src = hasil findSource atau null.
    lap (boleh kosong) = {api: titik panas [{la, lo}], st: stasiun ukur [{la, lo}]}. */
 function peta(D, sel, src, w, fsk, lap) {
   const W = Math.round(Math.min(w || 340, 560)), pad = 14, lon0 = 99.7, lon1 = 103.9, lat0 = 2.6, lat1 = -1.0;
@@ -254,9 +280,20 @@ function peta(D, sel, src, w, fsk, lap) {
     placed.push(best.bx); lab[i] = best;
   });
 
-  let s = '<rect width="' + W + '" height="' + Ht + '" rx="16" fill="var(--sk)"/>';
-  [100, 101, 102, 103].forEach(lo => { s += '<line x1="' + X(lo).toFixed(1) + '" x2="' + X(lo).toFixed(1) + '" y1="' + pad + '" y2="' + (Ht - pad) + '" stroke="var(--ln)" stroke-dasharray="2 5"/>'; });
-  [2, 1, 0, -1].forEach(la => { s += '<line y1="' + Y(la).toFixed(1) + '" y2="' + Y(la).toFixed(1) + '" x1="' + pad + '" x2="' + (W - pad) + '" stroke="var(--ln)" stroke-dasharray="2 5"/>'; });
+  /* Peta dasar. Koordinat PETA_DASAR dalam satuan 1/u derajat dari pojok (lon0, lat0), jadi cukup
+     digeser dan diskalakan agar tepat sama dengan X() dan Y(). Garis memakai non-scaling-stroke
+     sehingga tebalnya tetap dalam piksel. Wilayah tanpa data diberi isian transparan agar tetap
+     bisa disentuh. Wilayah adalah hiasan (aria-hidden); pilihan lewat keyboard memakai gelembung. */
+  let s = '<defs><clipPath id="pk"><rect width="' + W + '" height="' + Ht + '" rx="16"/></clipPath></defs>' +
+          '<rect class="laut" width="' + W + '" height="' + Ht + '" rx="16"/>';
+  if (typeof PETA_DASAR !== 'undefined') {
+    const P = PETA_DASAR;
+    s += '<g clip-path="url(#pk)" aria-hidden="true"><g transform="translate(' + X(P.lon0).toFixed(2) + ' ' + Y(P.lat0).toFixed(2) + ') scale(' + (sc / P.u).toFixed(5) + ')">' +
+         '<path class="drt" d="' + P.darat + '"/><path class="drt" d="' + P.wil.join('') + '"/>' +
+         P.wil.map((p, i) => '<path class="wl" data-c="' + i + '" d="' + p + '" fill="' + (D[i] ? KATEGORI[kategoriIdx(D[i].aqi)].c1 : 'transparent') + '"/>').join('') +
+         '<path class="dnu" d="' + P.danau + '"/><path class="sgi" d="' + P.sungai + '"/>' +
+         (P.wil[sel] ? '<path class="wl-on" d="' + P.wil[sel] + '"/>' : '') + '</g></g>';
+  }
   /* nama provinsi/perairan sekitar: hiasan orientasi, dilewati bila akan menimpa sesuatu */
   TETANGGA.forEach(t => {
     const x = X(t[2]), y = Y(t[1]), bx = boxOf(t[0], x, y, t[3], 6.1, 13);
@@ -292,7 +329,7 @@ function peta(D, sel, src, w, fsk, lap) {
          '<text class="bn" x="' + x.toFixed(1) + '" y="' + (y + 4.5).toFixed(1) + '" text-anchor="middle" fill="' + (kt ? kt.fg : '#FFFFFF') + '">' + (d ? d.aqi : '?') + '</text>' +
          (L ? '<text class="bl halo" x="' + L.lx.toFixed(1) + '" y="' + L.ly.toFixed(1) + '" text-anchor="' + L.an + '">' + c.s + '</text>' : '') + '</g>';
   });
-  return '<svg class="peta" viewBox="0 0 ' + W + ' ' + Ht + '" width="100%" role="group" aria-label="Peta 12 wilayah Riau menurut posisi sebenarnya">' + s + '</svg>';
+  return '<svg class="peta" viewBox="0 0 ' + W + ' ' + Ht + '" width="100%" role="group" aria-label="Peta 12 kabupaten/kota Riau, tiap wilayah diwarnai menurut kategori AQI">' + s + '</svg>';
 }
 
 /* ---------- kompas angin ----------

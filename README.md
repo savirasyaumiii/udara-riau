@@ -2,13 +2,15 @@
 
 Panduan harian kualitas udara dan kabut asap untuk 12 kabupaten/kota di Provinsi Riau. Web statis (HTML, CSS, JavaScript tanpa kerangka kerja, tanpa server, tanpa basis data) yang dibuat sebagai proyek Kerja Praktik Teknik Informatika UIR dengan pendekatan *Design Thinking*. Nama sebelumnya *Udara Riau*; folder proyek dan repositori GitHub tetap bernama `udara-riau`. Judul proyek: *Perancangan Pengalaman Pengguna Web Panduan Kualitas Udara dan Kabut Asap 12 Kabupaten/Kota di Provinsi Riau untuk Mendukung Aktivitas Kerja Pegawai dengan Metode Design Thinking (Studi Kasus: Pegawai Kantor Cabang Bank di Pekanbaru)*. Aspek studi kasus pegawai ada pada kelompok pengguna **Pegawai kantor** dan kegiatan **Berangkat atau pulang kerja** serta **Kunjungan nasabah atau kerja di luar kantor** pada halaman Rencana.
 
+Latar halaman berupa langit yang warnanya mengikuti kategori udara wilayah terpilih (biru cerah saat baik, kuning berkabut, sampai jingga kecokelatan saat berasap), dengan siluet pemandangan Riau yang makin tertutup kabut bila udara memburuk.
+
 Lima halaman:
 
 | Halaman | Isi |
 |---|---|
 | **Hari ini** | Kalimat keputusan, angka US AQI dan skala kategori, cuaca BMKG saat ini, ringkasan angka (PM2.5 jam ini, tertinggi/terendah 24 jam, tren), hasil ukur stasiun dengan perkiraan ISPU (bila token WAQI diisi), prakiraan cuaca BMKG per 3 jam dengan peringatan udara kabur/berasap, grafik 48 jam, saran per kelompok pengguna |
 | **Cuaca** | Galeri peta resmi BMKG (potensi kebakaran hutan, hari tanpa hujan, angin, citra satelit, prediksi hujan, gelombang) yang bisa diperbesar, grafik cuaca 3 hari BMKG (suhu, hujan, arah angin), prakiraan 14 hari (suhu dan peluang hujan), hari tanpa hujan dan hujan 90 hari dibanding normal (sifat hujan BMKG), iklim bulanan 1991–2020 dengan bulan relatif kering |
-| **Se-Riau** | Peta dan peringkat 12 kabupaten/kota (dengan cuaca BMKG tiap wilayah, titik panas satelit, dan stasiun ukur), indikasi asap kiriman, titik panas di arah datangnya angin |
+| **Se-Riau** | Peta batas 12 kabupaten/kota yang diwarnai menurut kategori AQI (dengan laut, daratan sekitar, sungai besar, titik panas satelit, dan stasiun ukur), peringkat dengan cuaca BMKG tiap wilayah, indikasi asap kiriman, titik panas di arah datangnya angin |
 | **Rencana** | Jam aman 48 jam untuk delapan kegiatan (termasuk dua kegiatan kerja), garis waktu, jam terbaik, saran alternatif |
 | **Catatan** | Catatan gejala pribadi, pola gejala terhadap AQI, daftar kesiapan (tersimpan hanya di peramban) |
 
@@ -24,19 +26,21 @@ udara-riau/
 │   ├── data.js         data referensi: wilayah, kategori AQI dan ISPU, saran, kegiatan, alamat API, patokan titik panas,
 │   │                   kategori hari tanpa hujan dan sifat hujan BMKG
 │   ├── iklim.js        normal iklim bulanan 1991–2020 tiap wilayah (dibuat oleh tools/buat-iklim.js)
+│   ├── petadasar.js    peta dasar halaman Se-Riau: batas 12 kabupaten/kota, daratan sekitar, danau, sungai (dibuat oleh tools/buat-peta.js)
 │   ├── logic.js        fungsi murni: kategori, saran, tren, jam aman, asap kiriman, pola gejala, ISPU, pembaca WAQI dan petak
 │   │                   satelit, hari tanpa hujan, hujan dibanding normal, bulan relatif kering
 │   ├── api.js          permintaan ke Open-Meteo (cache 15 menit, cadangan maks. 3 jam; harian 3 jam), BMKG (cache 1 jam,
 │   │                   cadangan maks. 12 jam), WAQI (15 menit), NASA GIBS (1 jam), dan NASA POWER (12 jam)
-│   ├── svg.js          ikon, langit, grafik, garis waktu, peta, kompas, grafik cuaca dan iklim (semuanya SVG)
+│   ├── svg.js          ikon, langit, siluet latar halaman, grafik, garis waktu, peta, kompas, grafik cuaca dan iklim (semuanya SVG)
 │   └── app.js          keadaan aplikasi, tampilan lima halaman, interaksi
 ├── tests/logic.test.js uji otomatis fungsi logika (Node.js, tanpa pustaka tambahan)
 ├── tools/buat-iklim.js pembuat js/iklim.js dari NASA POWER (cukup dijalankan sekali)
+├── tools/buat-peta.js  pembuat js/petadasar.js dari geoBoundaries, Natural Earth, dan OpenStreetMap (cukup dijalankan sekali)
 ├── .vscode/            rekomendasi ekstensi dan pengaturan Live Server
 └── README.md
 ```
 
-Urutan pemuatan skrip di `index.html` penting: `kunci.js` → `data.js` → `iklim.js` → `logic.js` → `api.js` → `svg.js` → `app.js`.
+Urutan pemuatan skrip di `index.html` penting: `kunci.js` → `data.js` → `iklim.js` → `petadasar.js` → `logic.js` → `api.js` → `svg.js` → `app.js`.
 
 ## Langkah awal di VS Code
 
@@ -68,7 +72,7 @@ Butuh [Node.js](https://nodejs.org/) versi 16 atau lebih baru. Di terminal VS Co
 node tests/logic.test.js
 ```
 
-Semua baris harus berstatus `ok` dan baris terakhir menyatakan `76 uji lulus`. Uji mencakup data referensi, batas kategori, saran per kelompok, tren, jam aman, asap kiriman, pola gejala, pembaca respons API (Open-Meteo, BMKG, WAQI, petak vektor NASA), ISPU, titik panas di arah datangnya angin, normal iklim, hari tanpa hujan, hujan dibanding normal, kontras warna, dan pembuat SVG termasuk grafik halaman Cuaca. Tampilan di layar tidak diuji oleh berkas ini; pengujian tampilan pada laporan KP memakai Playwright terpisah.
+Semua baris harus berstatus `ok` dan baris terakhir menyatakan `80 uji lulus`. Uji mencakup data referensi, batas kategori, saran per kelompok, tren, jam aman, asap kiriman, pola gejala, pembaca respons API (Open-Meteo, BMKG, WAQI, petak vektor NASA), ISPU, titik panas di arah datangnya angin, normal iklim, hari tanpa hujan, hujan dibanding normal, kontras warna (termasuk teks di atas semua warna langit latar), peta dasar (titik data tiap wilayah harus berada di dalam batas wilayahnya sendiri), dan pembuat SVG termasuk grafik halaman Cuaca. Tampilan di layar tidak diuji oleh berkas ini; pengujian tampilan pada laporan KP memakai Playwright terpisah.
 
 ### Mengaktifkan hasil ukur stasiun (token WAQI)
 
@@ -149,7 +153,7 @@ Font **Atkinson Hyperlegible** dan **Bricolage Grotesque** dimuat dari Google Fo
 - **Sumber:** [Open-Meteo](https://open-meteo.com/) Air Quality API (`us_aqi`, model CAMS) dan Forecast API (angin permukaan). Tanpa kunci API. Gratis untuk penggunaan nonkomersial dan menuntut atribusi, yang sudah ada di kaki halaman. Periksa ketentuan terbaru bila web dipakai di luar keperluan akademik.
 - **BMKG:** prakiraan cuaca resmi per 3 jam dari `api.bmkg.go.id/publik/prakiraan-cuaca` (data terbuka BMKG, wajib mencantumkan BMKG sebagai sumber; batas 60 permintaan/menit per IP). Satu kelurahan di pusat ibu kota tiap wilayah (kode `bm` di `js/data.js`). Dipakai untuk suhu, kelembapan, angin, dan kondisi cuaca termasuk "Udara Kabur" dan "Kabut/Asap". BMKG tidak menyediakan angka kualitas udara/ISPU lewat layanan terbuka, jadi angka AQI tetap dari Open-Meteo.
 - **Halaman Cuaca:**
-  - *Galeri peta BMKG:* enam peta resmi yang sama dengan bagian "Visualisasi Cuaca dan Iklim" di bmkg.go.id (`PETA_BMKG` di `js/data.js`), dimuat langsung dari `dataweb.bmkg.go.id`. Alamatnya tetap dan isinya diperbarui BMKG; web menambahkan `?v=` yang berganti tiap jam agar peta baru tidak tertahan cache. Sumber BMKG dicantumkan pada galeri dan jendela perbesaran. Peta baru dimuat saat kartunya hampir terlihat (di ponsel awalnya 2 peta, sekitar 1 MB); animasi citra satelit (sekitar 6,9 MB) hanya dimuat bila diketuk. Peta yang gagal dimuat diganti keterangan dan baru dicoba lagi pada jam berikutnya. Bila BMKG mengubah alamat atau memblokir pemakaian gambar dari luar situsnya, galeri menampilkan keterangan itu dan bagian lain tetap berjalan; perbarui alamat di `PETA_BMKG`.
+  - *Galeri peta BMKG:* enam peta resmi yang sama dengan bagian "Visualisasi Cuaca dan Iklim" di bmkg.go.id (`PETA_BMKG` di `js/data.js`), dimuat langsung dari `dataweb.bmkg.go.id`. Alamatnya tetap dan isinya diperbarui BMKG; web menambahkan `?v=` yang berganti tiap jam agar peta baru tidak tertahan cache. Sumber BMKG dicantumkan pada galeri dan jendela perbesaran. Peta baru dimuat saat kartunya hampir terlihat (di ponsel awalnya 2 peta, sekitar 1 MB); animasi citra satelit (sekitar 6,9 MB) hanya dimuat bila diketuk. Setiap peta diunduh sekali per jam walaupun halaman digambar ulang saat unduhan berjalan (misalnya data baru tiba). Peta yang gagal dimuat diganti keterangan dan baru dicoba lagi pada jam berikutnya. Bila BMKG mengubah alamat atau memblokir pemakaian gambar dari luar situsnya, galeri menampilkan keterangan itu dan bagian lain tetap berjalan; perbarui alamat di `PETA_BMKG`.
   - *Cuaca 3 hari:* prakiraan BMKG yang sama dengan halaman Hari ini (24 periode tiga jam). Panah angin menunjuk ke arah angin bertiup.
   - *Prakiraan 14 hari dan hari tanpa hujan:* Open-Meteo Forecast API (`daily`, `past_days=92`, `forecast_days=16`, satu permintaan untuk 12 titik, cache 3 jam). Ini model cuaca global, bukan BMKG; untuk 3 hari ke depan utamakan BMKG. Hari disebut hujan bila minimal 1 mm. Kategori hari tanpa hujan mengikuti BMKG: 1–5 sangat pendek, 6–10 pendek, 11–20 menengah, 21–30 panjang, 31–60 sangat panjang, lebih dari 60 ekstrem panjang (`HTH_KAT` di `js/data.js`). BMKG menerbitkan peta hari tanpa hujan resmi tiap dasarian.
   - *Hujan 90 hari dibanding normal:* NASA POWER daily API (`PRECTOTCORR`, reanalisis MERRA-2/GEOS), satu permintaan per wilayah saat wilayah itu dilihat (cache 12 jam). Datanya tertinggal 3–5 hari. Sumbernya sama dengan normal iklim, jadi persentasenya sebanding. Sifat hujan memakai batas BMKG (bawah normal < 85 %, normal 85–115 %, atas normal > 115 %, `SIFAT_HUJAN`); BMKG memakainya untuk jumlah bulanan, di sini diterapkan pada 90 hari.
@@ -164,6 +168,7 @@ Font **Atkinson Hyperlegible** dan **Bricolage Grotesque** dimuat dari Google Fo
 - **Titik panas di arah datangnya angin** memakai patokan rancangan di `js/data.js` (`KM_DEKAT` 50 km, `KM_HULU` 150 km, `SUDUT_HULU` 45°) dan arah angin model, bukan model sebaran asap.
 - **Resolusi:** keluaran model sekitar 45 km, bukan pembacaan sensor. Wilayah yang berdekatan dapat menampilkan angka mirip.
 - **Titik data:** pusat kota atau ibu kota kabupaten dengan koordinat perkiraan (`js/data.js`). Belum sampai tingkat kecamatan.
+- **Peta Se-Riau:** batas kabupaten/kota dari BPS lewat [geoBoundaries](https://www.geoboundaries.org/) (gbOpen IDN ADM2, lisensi CC BY 3.0 IGO), pesisir Malaysia dan Singapura dari [Natural Earth](https://www.naturalearthdata.com/) (domain publik), dan sungai besar (Siak, Kampar, Rokan, Indragiri/Kuantan) dari [OpenStreetMap](https://www.openstreetmap.org/copyright) (© kontributor OpenStreetMap, ODbL 1.0). Semuanya disimpan di `js/petadasar.js` (sekitar 18 KB) oleh `node tools/buat-peta.js`, jadi peta tidak bergantung pada layanan peta luar. Batas sudah disederhanakan untuk tampilan (selisih sekitar 0,5 km), bukan batas resmi untuk keperluan hukum. Satu wilayah diwarnai menurut AQI di satu titik datanya, jadi bagian lain wilayah yang luas (misalnya Indragiri Hilir atau Pelalawan) bisa berbeda; sumber batas dan sungai disebut di bawah peta dan di kaki halaman.
 - **Asap kiriman** adalah heuristik sederhana (`findSource` di `js/logic.js`), bukan penelusuran asal asap.
 - **Catatan gejala** hanya tersimpan di peramban perangkat itu (`localStorage`), tidak dikirim ke server mana pun.
 - Saran kesehatan bersifat umum dan belum ditinjau tenaga kesehatan. Untuk keputusan penting seperti libur sekolah, ikuti pengumuman BPBD, pemerintah daerah, dan BMKG.
@@ -174,6 +179,10 @@ Font **Atkinson Hyperlegible** dan **Bricolage Grotesque** dimuat dari Google Fo
 |---|---|
 | Teks saran per kategori, kelompok pengguna, kegiatan, daftar kesiapan | `js/data.js` (`SARAN`, `PROFIL`, `KEGIATAN`, `KESIAPAN`) |
 | Warna kategori, langit, kalimat keputusan | `js/data.js` → `KATEGORI` |
+| Warna langit latar halaman | `js/data.js` → `KATEGORI` (`lt` tema terang, `lg` tema gelap) dan `LATAR_NETRAL` (saat memuat atau gagal); uji kontras menolak warna yang membuat judul web sulit dibaca |
+| Siluet latar (sawit, jembatan, rumah Melayu) | `js/svg.js` → `latar`; warna dan tebal kabut di `css/style.css` → `.latar`, `--sil`, `--silo` |
+| Warna peta (laut, daratan, sungai, kepekatan warna wilayah) | `css/style.css` → `--laut`, `--darat`, `--sungai`, `--wo` |
+| Batas wilayah dan sungai pada peta | jalankan ulang `node tools/buat-peta.js` (jangan ubah `js/petadasar.js` manual) |
 | Menambah atau mengganti wilayah | `js/data.js` → `WILAYAH` (tambahkan juga satu angka di `SIM_FAKTOR`) |
 | Warna antarmuka, tipografi, jarak, tema gelap | `css/style.css` (token di bagian atas) |
 | Bentuk pohon sawit, matahari, kabut | `js/svg.js` → `sawit`, `adegan` |
@@ -195,9 +204,11 @@ Setelah mengubah `data.js` atau `logic.js`, jalankan lagi `node tests/logic.test
 ## Aksesibilitas
 
 - Tombol A−/A+ untuk ukuran teks (90–150%), tema terang dan gelap, dan font yang dirancang agar mudah dibaca.
-- Kontras teks dan latar minimal 4,5 : 1 (diperiksa dengan rumus WCAG dalam uji otomatis untuk lencana kategori dan langit).
+- Kontras teks dan latar minimal 4,5 : 1 (diperiksa dengan rumus WCAG dalam uji otomatis untuk lencana kategori, langit kartu keputusan, dan semua warna langit latar halaman).
 - Target sentuh tombol, tab, dan kotak centang minimal 44 piksel. **Pengecualian:** titik pada peta berdiameter sekitar 27 piksel (memenuhi 24 piksel pada WCAG 2.5.8); wilayah yang sama dapat dipilih lewat peringkat atau pemilih wilayah.
 - Informasi tidak bergantung pada warna semata: kategori selalu ditampilkan bersama nama dan angka; jam aman dibedakan oleh tinggi batang dan pola.
+- Bidang wilayah pada peta bisa disentuh untuk memilih wilayah (target lebih besar dari lingkaran), tetapi tersembunyi dari pembaca layar; pilihan lewat keyboard dan pembaca layar tetap memakai lingkaran, peringkat, atau pemilih wilayah.
+- Langit dan siluet latar adalah hiasan (`aria-hidden`, tidak menghalangi sentuhan), tidak dicetak, dan disembunyikan pada mode kontras tinggi Windows. Warna langit berganti perlahan kecuali perangkat meminta gerakan dikurangi.
 - Segitiga titik panas dan kotak stasiun pada peta adalah hiasan (`aria-hidden`); jumlah, jarak, dan arahnya disampaikan sebagai teks pada kartu Titik panas satelit dan Hasil ukur stasiun.
 - Teks dasar 200% pada lebar 320 piksel diuji tanpa gulir mendatar (Chromium). Belum diuji pada perangkat ponsel nyata dan pembaca layar.
 

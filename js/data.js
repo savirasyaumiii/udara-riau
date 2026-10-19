@@ -35,16 +35,28 @@ const WILAYAH = [
           (kontras teks terhadap c1 sudah dihitung, minimal 4,5 : 1)
    z/m/h = warna langit di kartu keputusan: puncak, tengah, cakrawala.
            Teks putih berada di atas z..m, jadi keduanya dibuat gelap.
-   sun  = warna matahari; haze = tebal kabut (0 sampai 1) pada ilustrasi
+   sun  = warna matahari; haze = tebal kabut (0 sampai 1) pada ilustrasi dan latar halaman
+   lt/lg = langit latar halaman [atas, tengah, cakrawala] pada tema terang/gelap (lihat LATAR_NETRAL)
    kalimat = kalimat keputusan (Tabel kalimat keputusan dan saran, laporan) */
 const KATEGORI = [
-  { n: 'Baik',                               s: 'Baik',        r: '0–50',    max: 50,    c1: '#1B7F47', fg: '#FFFFFF', z: '#0A3B73', m: '#1F6AB5', h: '#8CCBF2', sun: '#FFF3C4', haze: 0,    kalimat: 'Udara baik, silakan beraktivitas di luar' },
-  { n: 'Sedang',                             s: 'Sedang',      r: '51–100',  max: 100,   c1: '#F2C200', fg: '#2A2200', z: '#1B3F63', m: '#4F6577', h: '#EBCB7A', sun: '#FFE08A', haze: 0.16, kalimat: 'Udara cukup baik untuk kebanyakan orang' },
-  { n: 'Tidak sehat bagi kelompok sensitif', s: 'Sensitif',    r: '101–150', max: 150,   c1: '#B34E00', fg: '#FFFFFF', z: '#2F3B55', m: '#5C5468', h: '#F2A65A', sun: '#FFB45E', haze: 0.34, kalimat: 'Kurangi aktivitas berat di luar ruangan' },
-  { n: 'Tidak sehat',                        s: 'Tidak sehat', r: '151–200', max: 200,   c1: '#C93131', fg: '#FFFFFF', z: '#3E3049', m: '#6A4452', h: '#EE7F4B', sun: '#FF8B4A', haze: 0.5,  kalimat: 'Batasi waktu di luar ruangan, pakai masker' },
-  { n: 'Sangat tidak sehat',                 s: 'Sangat',      r: '201–300', max: 300,   c1: '#7E2EA6', fg: '#FFFFFF', z: '#3F232F', m: '#6B3236', h: '#D9573A', sun: '#F0523A', haze: 0.66, kalimat: 'Sebaiknya tetap di dalam rumah' },
-  { n: 'Berbahaya',                          s: 'Berbahaya',   r: '301+',    max: 99999, c1: '#6B1426', fg: '#FFFFFF', z: '#24131A', m: '#4A2224', h: '#9C3A2B', sun: '#C9452F', haze: 0.82, kalimat: 'Tetap di dalam rumah, jangan keluar' }
+  { n: 'Baik',                               s: 'Baik',        r: '0–50',    max: 50,    c1: '#1B7F47', fg: '#FFFFFF', z: '#0A3B73', m: '#1F6AB5', h: '#8CCBF2', sun: '#FFF3C4', haze: 0,    kalimat: 'Udara baik, silakan beraktivitas di luar',
+    lt: ['#C9E3F6', '#DDEEF8', '#EEF6F3'], lg: ['#0A1A2B', '#0B1621', '#0E1A1F'] },
+  { n: 'Sedang',                             s: 'Sedang',      r: '51–100',  max: 100,   c1: '#F2C200', fg: '#2A2200', z: '#1B3F63', m: '#4F6577', h: '#EBCB7A', sun: '#FFE08A', haze: 0.16, kalimat: 'Udara cukup baik untuk kebanyakan orang',
+    lt: ['#D3E1EA', '#E8EADB', '#F4EBCB'], lg: ['#101A24', '#14181A', '#1C1B13'] },
+  { n: 'Tidak sehat bagi kelompok sensitif', s: 'Sensitif',    r: '101–150', max: 150,   c1: '#B34E00', fg: '#FFFFFF', z: '#2F3B55', m: '#5C5468', h: '#F2A65A', sun: '#FFB45E', haze: 0.34, kalimat: 'Kurangi aktivitas berat di luar ruangan',
+    lt: ['#D9DDE0', '#EEE2D0', '#F5DDBF'], lg: ['#12171F', '#1B1715', '#271C12'] },
+  { n: 'Tidak sehat',                        s: 'Tidak sehat', r: '151–200', max: 200,   c1: '#C93131', fg: '#FFFFFF', z: '#3E3049', m: '#6A4452', h: '#EE7F4B', sun: '#FF8B4A', haze: 0.5,  kalimat: 'Batasi waktu di luar ruangan, pakai masker',
+    lt: ['#DDD8D6', '#F0DACA', '#F3D2BA'], lg: ['#15151C', '#211714', '#2D1A11'] },
+  { n: 'Sangat tidak sehat',                 s: 'Sangat',      r: '201–300', max: 300,   c1: '#7E2EA6', fg: '#FFFFFF', z: '#3F232F', m: '#6B3236', h: '#D9573A', sun: '#F0523A', haze: 0.66, kalimat: 'Sebaiknya tetap di dalam rumah',
+    lt: ['#DDD4D5', '#EDD3C9', '#F0CFC4'], lg: ['#171219', '#221315', '#2C1514'] },
+  { n: 'Berbahaya',                          s: 'Berbahaya',   r: '301+',    max: 99999, c1: '#6B1426', fg: '#FFFFFF', z: '#24131A', m: '#4A2224', h: '#9C3A2B', sun: '#C9452F', haze: 0.82, kalimat: 'Tetap di dalam rumah, jangan keluar',
+    lt: ['#DDD4D5', '#EBD0C9', '#EDCEC6'], lg: ['#150E12', '#1E0E11', '#260F0F'] }
 ];
+
+/* Langit latar halaman sebelum data tersedia (memuat, gagal). Warna langit per kategori ada di
+   KATEGORI: lt = tema terang, lg = tema gelap, masing-masing [atas, tengah, cakrawala]. Teks di luar
+   kartu (judul web dan keterangannya) diuji tetap berkontras minimal 4,5 : 1 di semua warna ini. */
+const LATAR_NETRAL = { lt: ['#E3EAEF', '#EEF3F6', '#F1F4F5'], lg: ['#0A1117', '#0B1218', '#0D141A'] };
 
 /* Tiga aspek saran, urutannya sama dengan isi SARAN: [kode, judul, ikon] */
 const ASPEK = [
@@ -253,12 +265,13 @@ const PM25_BP = [
   [55.5, 125.4, 151, 200], [125.5, 225.4, 201, 300], [225.5, 325.4, 301, 500]
 ];
 
-/* Provinsi dan perairan di sekitar Riau, hanya label orientasi pada peta:
+/* Provinsi, negara, dan perairan di sekitar Riau, hanya label orientasi pada peta:
    [teks, lintang, bujur, anchor] */
 const TETANGGA = [
   ['Sumut',        1.75,  99.78, 'start'],
   ['Sumbar',      -0.10,  99.78, 'start'],
   ['Jambi',       -0.88, 102.00, 'middle'],
   ['Kepri',        0.95, 103.62, 'middle'],
-  ['Selat Malaka', 2.45, 102.60, 'middle']
+  ['Selat Malaka', 2.45, 102.60, 'middle'],
+  ['Malaysia',     2.50, 103.62, 'middle']
 ];
